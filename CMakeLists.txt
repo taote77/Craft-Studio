@@ -1,51 +1,28 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(lvglpp-editor LANGUAGES CXX)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(cmake/global.cmake)
+
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# QtCreator supports the following variables for Android, which are identical to qmake Android variables.
-# Check http://doc.qt.io/qt-5/deployment-android.html for more information.
-# They need to be set before the find_package(Qt5 ...) call.
 
-#if(ANDROID)
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-#    if (ANDROID_ABI STREQUAL "armeabi-v7a")
-#        set(ANDROID_EXTRA_LIBS
-#            ${CMAKE_CURRENT_SOURCE_DIR}/path/to/libcrypto.so
-#            ${CMAKE_CURRENT_SOURCE_DIR}/path/to/libssl.so)
-#    endif()
-#endif()
+project(MasterWay LANGUAGES C CXX)
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick LinguistTools REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick LinguistTools REQUIRED)
+add_subdirectory(src/app)
 
-set(TS_FILES lvglpp-editor_zh_CN.ts)
+# set(VTK_DEBUG_MODULE_LOADER ON) # 跟踪模块加载顺序
 
-if(ANDROID)
-    add_library(lvglpp-editor SHARED
-      main.cc
-      qml.qrc
-      ${TS_FILES}
-    )
-else()
-    add_executable(lvglpp-editor
-      main.cc
-      qml.qrc
-      ${TS_FILES}
-    )
-endif()
+add_subdirectory(src/3rd-party)
 
-target_compile_definitions(lvglpp-editor
-  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
-target_link_libraries(lvglpp-editor
-  PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick)
+#project(lvglpp-editor LANGUAGES CXX)
 
-qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+#set(CMAKE_INCLUDE_CURRENT_DIR ON)
+

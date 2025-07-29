@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "cmakeMinimumRequired": { "major": 3, "minor": 20 },
+  "configurePresets": [
+    {
+      "name": "vtk_qt_config",
+      "displayName": "VTK with Qt Widgets Support",
+      "description": "Enable Qt integration and Widgets modules",
+      "cacheVariables": {
+        "VTK_GROUP_ENABLE_Qt": "YES",
+        "VTK_MODULE_ENABLE_VTK_GUISupportQt": "YES",
+        "VTK_MODULE_ENABLE_VTK_RenderingQt": "YES",
+        "VTK_MODULE_ENABLE_VTK_ViewsQt": "YES",
+        "VTK_MODULE_ENABLE_VTK_InteractionWidgets": "YES",
+        "VTK_MODULE_ENABLE_VTK_ViewsContext2D": "YES",
+        "VTK_QT_VERSION": "5", 
+        "BUILD_SHARED_LIBS": "ON", 
+        "VTK_Group_Imaging": "YES", 
+        "VTK_Group_Rendering": "YES"
+      }
+    }
+  ]
+}
