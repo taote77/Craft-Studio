@@ -9,6 +9,10 @@ class ActionFactory : public QObject
 public:
     explicit ActionFactory(QObject *parent = nullptr);
 
+public slots:
+
+    void exitApp();
+
 signals:
     void sigExit();
 

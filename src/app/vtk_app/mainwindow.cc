@@ -8,6 +8,68 @@
 #include <QApplication>
 #include <QDebug>
 
+MainWindow::MainWindow(QWidget* parent)
+  : QMainWindow(parent)
+{
+  setupUI();
+}
+
+void MainWindow::setupUI()
+{
+  this->resize(1200, 900);
+
+  _action_factory = new ActionFactory(this);
+
+  connect(_action_factory, &ActionFactory::sigExit, this, &MainWindow::exit);
+
+  auto menu_mgr = new MenuManager(this);
+  menu_mgr->init(*this, *_action_factory);
+
+  // dock
+  addDockWidget(Qt::LeftDockWidgetArea, &controlDock);
+
+  dockLayout = new QVBoxLayout();
+  layoutContainer.setLayout(dockLayout);
+  controlDock.setWidget(&layoutContainer);
+
+  randomizeButton.setText("Randomize");
+  dockLayout->addWidget(&randomizeButton);
+
+  // Render area.
+  _vtkRenderWidget = new QVTKOpenGLNativeWidget();
+  this->setCentralWidget(_vtkRenderWidget);
+
+  // VTK part.
+  _vtkRenderWindow = vtkNew<vtkGenericOpenGLRenderWindow>();
+  _vtkRenderWidget->setRenderWindow(_vtkRenderWindow);
+
+  _sphere = vtkNew<vtkSphereSource>();
+  _sphere->SetRadius(1.0);
+  _sphere->SetThetaResolution(100);
+  _sphere->SetPhiResolution(100);
+
+  _mapper = vtkNew<vtkDataSetMapper>();
+  _mapper->SetInputConnection(_sphere->GetOutputPort());
+
+  vtkNew<vtkActor> actor;
+  actor->SetMapper(_mapper);
+  actor->GetProperty()->SetEdgeVisibility(true);
+  actor->GetProperty()->SetRepresentationToSurface();
+
+  vtkNew<vtkRenderer> renderer;
+  renderer->AddActor(actor);
+
+  _vtkRenderWindow->AddRenderer(renderer);
+
+  // Setup initial status.
+
+  Randomize(_sphere, _mapper, _vtkRenderWindow, _rand_eng);
+
+  // connect the buttons
+  QObject::connect(&randomizeButton, &QPushButton::released,
+    [this]() { Randomize(_sphere, _mapper, _vtkRenderWindow, _rand_eng); });
+}
+
 /**
  * Deform the sphere source using a random amplitude and modes and render it in
  * the window
@@ -57,68 +119,6 @@ void MainWindow::Randomize(vtkSphereSource* sphere, vtkDataSetMapper* mapper,
   mapper->SetScalarModeToUsePointData();
   mapper->ColorByArrayComponent("Height", 0);
   window->Render();
-}
-
-MainWindow::MainWindow(QWidget* parent)
-  : QMainWindow(parent)
-{
-  setupUI();
-}
-
-void MainWindow::setupUI()
-{
-  this->resize(1200, 900);
-
-  _action_factory = new ActionFactory(this);
-
-  connect(_action_factory, &ActionFactory::sigExit, this, &MainWindow::exit);
-
-  auto menu_mgr = new MenuManager(this);
-  menu_mgr->init(*this, *_action_factory);
-
-  // dock
-  addDockWidget(Qt::LeftDockWidgetArea, &controlDock);
-
-  dockLayout = new QVBoxLayout();
-  layoutContainer.setLayout(dockLayout);
-  controlDock.setWidget(&layoutContainer);
-
-  randomizeButton.setText("Randomize");
-  dockLayout->addWidget(&randomizeButton);
-
-  // Render area.
-  _vtkRenderWidget = new QVTKOpenGLNativeWidget();
-  this->setCentralWidget(_vtkRenderWidget);
-
-  // VTK part.
-  _vtkRenderWindow = vtkNew<vtkGenericOpenGLRenderWindow>();
-  _vtkRenderWidget->setRenderWindow(_vtkRenderWindow);
-
-  sphere = vtkNew<vtkSphereSource>();
-  sphere->SetRadius(1.0);
-  sphere->SetThetaResolution(100);
-  sphere->SetPhiResolution(100);
-
-  mapper = vtkNew<vtkDataSetMapper>();
-  mapper->SetInputConnection(sphere->GetOutputPort());
-
-  vtkNew<vtkActor> actor;
-  actor->SetMapper(mapper);
-  actor->GetProperty()->SetEdgeVisibility(true);
-  actor->GetProperty()->SetRepresentationToSurface();
-
-  vtkNew<vtkRenderer> renderer;
-  renderer->AddActor(actor);
-
-  _vtkRenderWindow->AddRenderer(renderer);
-
-  // Setup initial status.
-  std::mt19937 randEng(0);
-  Randomize(sphere, mapper, _vtkRenderWindow, randEng);
-
-  // connect the buttons
-  QObject::connect(&randomizeButton, &QPushButton::released,
-    [this, &randEng]() { Randomize(sphere, mapper, _vtkRenderWindow, randEng); });
 }
 
 void MainWindow::exit()

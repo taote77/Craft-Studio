@@ -5,8 +5,17 @@
     <name>MenuManager</name>
     <message>
         <location filename="menu_manager.cc" line="13"/>
-        <location filename="../vtk_app/menu_manager.cc" line="13"/>
         <source>File</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../vtk_app/menu_manager.cc" line="13"/>
+        <source>&amp;File</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../vtk_app/menu_manager.cc" line="19"/>
+        <source>&amp;Edit</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

@@ -13,7 +13,7 @@
 #include <QVBoxLayout>
 
 #include <QVTKOpenGLNativeWidget.h>
-#include <vtk-9.5/vtkSmartPointer.h>
+#include <vtkSmartPointer.h>
 #include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkRenderer.h>
@@ -52,13 +52,13 @@ private:
 
   QPointer<QVTKOpenGLNativeWidget> _vtkRenderWidget;
 
-  // vtkGenericOpenGLRenderWindow* _vtkRenderWindow{ nullptr };
+  vtkSmartPointer<vtkGenericOpenGLRenderWindow> _vtkRenderWindow{nullptr};
 
-  vtkSmartPointer<vtkGenericOpenGLRenderWindow> _vtkRenderWindow{ nullptr };
+  vtkSmartPointer<vtkSphereSource> _sphere{nullptr};
 
-  vtkSmartPointer<vtkSphereSource> sphere{ nullptr };
+  vtkSmartPointer<vtkDataSetMapper> _mapper{nullptr};
 
-  vtkSmartPointer<vtkDataSetMapper> mapper{ nullptr };
+  std::mt19937 _rand_eng{0};
 };
 
 #endif // MAINWINOW_H

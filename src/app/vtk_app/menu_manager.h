@@ -10,7 +10,7 @@ class MenuManager : public QObject
 public:
     explicit MenuManager(QObject *parent = nullptr);
 
-    void init(QMainWindow& main_win, ActionFactory& action_fact);
+    void init(MainWindow& main_win, ActionFactory& action_fact);
 
 signals:
 
