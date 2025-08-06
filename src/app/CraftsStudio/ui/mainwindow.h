@@ -2,6 +2,7 @@
 #define MAINWINOW_H
 
 #include "actionfactory.h"
+#include "model_manager.h"
 
 #include <QDockWidget>
 #include <QGridLayout>
@@ -33,9 +34,6 @@ protected:
 
   void exit();
 
-  void Randomize(vtkSphereSource* sphere, vtkDataSetMapper* mapper,
-    vtkGenericOpenGLRenderWindow* window, std::mt19937& randEng);
-
 signals:
 
 private:
@@ -44,8 +42,6 @@ private:
   QDockWidget controlDock;
 
   QWidget layoutContainer;
-
-  QPushButton randomizeButton;
 
   QPointer<QVBoxLayout> dockLayout;
 

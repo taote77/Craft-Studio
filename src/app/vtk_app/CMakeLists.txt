@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.21)
 
-project(vtk-app LANGUAGES CXX)
+project(CraftsStudio LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -8,82 +8,86 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Quick LinguistTools REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Quick LinguistTools REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Concurrent  LinguistTools REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Concurrent LinguistTools REQUIRED)
 
-# set(TS_FILES cv-app_zh_CN.ts)
-
-
-add_executable(${PROJECT_NAME}
-  main.cc
-  ui/mainwindow.h
-  ui/mainwindow.cc
-  ui/menu_manager.h
-  ui/menu_manager.cc
-  ui/model_viewer.h
-  ui/model_viewer.cc
-  actionfactory.h
-  actionfactory.cc
-  # ${TS_FILES}
-)
-
-target_compile_definitions(${PROJECT_NAME}
-  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  Qt${QT_VERSION_MAJOR}::Core
-  Qt${QT_VERSION_MAJOR}::Quick
-  Qt${QT_VERSION_MAJOR}::Widgets
-)
-
-# qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
-
-find_package(VTK REQUIRED  )
-
-
-# find_package(VTK COMPONENTS 
+# find_package(VTK COMPONENTS
 #   CommonCore
-#   CommonDataModel
-#   FiltersSources
 #   GUISupportQt
-#   InteractionStyle
-#   RenderingContextOpenGL2
-#   RenderingCore
+#   InfovisCore
 #   RenderingFreeType
-#   RenderingGL2PSOpenGL2
-#   RenderingOpenGL2
-#   RenderingQt
-# )
+#   RenderingCore
+#   RenderingOpenGL2 
+#   ViewsQt)
+
+
+find_package(VTK REQUIRED)
+
 
 if(NOT VTK_FOUND)
-  message(FATAL_ERROR "MinimalQtVTKApp: Unable to find the VTK build folder.")
+  message("Skipping example: ${VTK_NOT_FOUND_MESSAGE}")
+  return()
 endif()
 
-if(NOT(TARGET VTK::GUISupportQt))
-  message(FATAL_ERROR "MinimalQtVTKApp: VTK not built with Qt support.")
-endif()
+message(STATUS "QT_VERSION_MAJOR: ${QT_VERSION}")
 
-if(NOT DEFINED VTK_QT_VERSION)
-  set(VTK_QT_VERSION 5)
-endif()
+add_executable(${PROJECT_NAME})
 
-
-if(POLICY CMP0020)
-  cmake_policy(SET CMP0020 NEW)
-  cmake_policy(SET CMP0071 NEW)
-endif()
-
-message(STATUS "VTK_INCLUDE_DIRS: ${VTK_INCLUDE_DIRS}")
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  ${VTK_LIBRARIES}  
+target_include_directories(${PROJECT_NAME} PRIVATE
+  main
+  ui
+  action
+  engine
 )
 
-# vtk_module_autoinit is needed
-vtk_module_autoinit(
-  TARGETS ${PROJECT_NAME}
-  MODULES ${VTK_LIBRARIES}
+qt5_add_resources(qrc_FILES app.qrc)
+
+#qt_add_resources(QT_RCC_F  app.qrc)
+
+
+target_sources(${PROJECT_NAME} PRIVATE
+  main/main.cc
+  main/application.cc
+  main/application.h
+  main/main_window.h
+  main/main_window.cc
+  ui/action_factory.h
+  ui/action_factory.cc
+  ui/action_handler.h
+  ui/action_handler.cc
+  ui/action_group_manager.h
+  ui/action_group_manager.cc
+  ui/widget_factory.h
+  ui/widget_factory.cc
+  ui/workspace.cc
+  ui/workspace.h
+  ui/dockdialog.cc
+  ui/dockdialog.h
+  ui/documentview.cc
+  ui/documentview.h
+  ui/consolewidget.cc
+  ui/consolewidget.h
+  action/action_interface.h
+  action/action_interface.cc
+  action/base_type.h
+  action/base_type.cc
+  engine/rs_document.h
+  engine/rs_document.cc
+  engine/rs_interactor_style.h
+  engine/rs_interactor_style.cc
+  engine/rs_interactorstyle_trackcamera.h
+  engine/rs_interactorstyle_trackcamera.cc
+  ${qrc_FILES}
 )
+
+
+target_link_libraries(${PROJECT_NAME} PRIVATE 
+  ${VTK_LIBRARIES}
+  Qt${QT_VERSION_MAJOR}::Widgets
+  Qt${QT_VERSION_MAJOR}::Concurrent
+)
+

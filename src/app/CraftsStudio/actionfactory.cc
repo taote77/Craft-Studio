@@ -180,17 +180,18 @@ void ActionFactory::addCone()
 
 void ActionFactory::openSTLFile()
 {
-  //
-  const QString& path = QFileDialog::getOpenFileName();
-  std::string path_str = path.toStdString();
-  if (path_str.empty())
+
+  // select stl file
+  const QString& path =
+    QFileDialog::getOpenFileName(nullptr, "Open STL File", QDir::homePath(), "STL Files (*.stl)");
+  if (path.isEmpty())
   {
-    return; // 用户取消了文件选择
+    return;
   }
 
   auto reader = vtkSmartPointer<vtkSTLReader>::New();
 
-  reader->SetFileName(path_str.c_str());
+  reader->SetFileName(path.toStdString().c_str());
 
   reader->Update();
 
@@ -206,15 +207,16 @@ void ActionFactory::openSTLFile()
 void ActionFactory::openOBJFile()
 {
 
-  const QString& path = QFileDialog::getOpenFileName();
-  std::string path_str = path.toStdString();
-  if (path_str.empty())
+  // 1. select OBJ 文件
+  const QString& path =
+    QFileDialog::getOpenFileName(nullptr, "Open OBJ File", QDir::homePath(), "OBJ Files (*.obj)");
+  if (path.isEmpty())
   {
-    return; // 用户取消了文件选择
+    return;
   }
 
   vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
-  reader->SetFileName(path_str.c_str());
+  reader->SetFileName(path.toStdString().c_str());
   reader->Update();
 
   // 2. 可选：模型变换（旋转、缩放等）
