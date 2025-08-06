@@ -20,10 +20,12 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Quick LinguistTools R
 
 add_executable(${PROJECT_NAME}
   main.cc
-  mainwindow.h
-  mainwindow.cc
-  menu_manager.h
-  menu_manager.cc
+  ui/mainwindow.h
+  ui/mainwindow.cc
+  ui/menu_manager.h
+  ui/menu_manager.cc
+  ui/model_viewer.h
+  ui/model_viewer.cc
   actionfactory.h
   actionfactory.cc
   # ${TS_FILES}
@@ -39,20 +41,22 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 
-find_package(VTK COMPONENTS 
-  CommonCore
-  CommonDataModel
-  FiltersSources
-  GUISupportQt
-  InteractionStyle
-  RenderingContextOpenGL2
-  RenderingCore
-  RenderingFreeType
-  RenderingGL2PSOpenGL2
-  RenderingOpenGL2
-  GUISupportQt
-  RenderingQt
-)
+find_package(VTK REQUIRED  )
+
+
+# find_package(VTK COMPONENTS 
+#   CommonCore
+#   CommonDataModel
+#   FiltersSources
+#   GUISupportQt
+#   InteractionStyle
+#   RenderingContextOpenGL2
+#   RenderingCore
+#   RenderingFreeType
+#   RenderingGL2PSOpenGL2
+#   RenderingOpenGL2
+#   RenderingQt
+# )
 
 if(NOT VTK_FOUND)
   message(FATAL_ERROR "MinimalQtVTKApp: Unable to find the VTK build folder.")

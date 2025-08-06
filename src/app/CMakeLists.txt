@@ -4,7 +4,7 @@ add_subdirectory(cv_app)
 
 add_subdirectory(vtk_app)
 
-#add_subdirectory(MinimalQtVTKApp)
+add_subdirectory(CraftsStudio)
 
 add_subdirectory(lvglpp-editor)
 
