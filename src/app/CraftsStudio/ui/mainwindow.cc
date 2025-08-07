@@ -6,6 +6,7 @@
 #include <vtkPointData.h>
 #include <vtkProperty.h>
 
+#include "engine/rs_interactor_style.h"
 #include <QApplication>
 #include <QDebug>
 
@@ -60,11 +61,25 @@ void MainWindow::setupUI()
   _action_factory->setVtkRenderer(_vtkRenderer);
 
   _vtkRenderWindow->AddRenderer(_vtkRenderer);
+
+  // 自定义交互
+  {
+    auto interactor = _vtkRenderWindow->GetInteractor();
+
+    interactor->RemoveAllObservers();
+
+    auto m_customStyle = vtkSmartPointer<RSInteractorStyle>::New();
+    m_customStyle->SetRenderer(_vtkRenderer);
+    interactor->SetInteractorStyle(m_customStyle);
+
+    _vtkRenderWidget->installEventFilter(this);
+  }
+  //
 }
 
 void MainWindow::exit()
 {
-  qDebug() << "exiout";
+  qDebug() << "exiting...";
 
   QApplication::exit();
 }

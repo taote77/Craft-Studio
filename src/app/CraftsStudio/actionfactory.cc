@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include <QTemporaryFile>
 
+#include <qapplication.h>
 #include <vtkActor.h>
 #include <vtkAlgorithm.h>
 #include <vtkConeSource.h>
@@ -182,8 +183,8 @@ void ActionFactory::openSTLFile()
 {
 
   // select stl file
-  const QString& path =
-    QFileDialog::getOpenFileName(nullptr, "Open STL File", QDir::homePath(), "STL Files (*.stl)");
+  const QString& path = QFileDialog::getOpenFileName(
+    nullptr, "Open STL File", QApplication::applicationDirPath(), "STL Files (*.stl)");
   if (path.isEmpty())
   {
     return;
@@ -208,8 +209,8 @@ void ActionFactory::openOBJFile()
 {
 
   // 1. select OBJ 文件
-  const QString& path =
-    QFileDialog::getOpenFileName(nullptr, "Open OBJ File", QDir::homePath(), "OBJ Files (*.obj)");
+  const QString& path = QFileDialog::getOpenFileName(
+    nullptr, "Open OBJ File", QApplication::applicationDirPath(), "OBJ Files (*.obj)");
   if (path.isEmpty())
   {
     return;

@@ -19,6 +19,8 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Quick LinguistTools R
 
 add_executable(${PROJECT_NAME}
   main.cc
+  engine/rs_interactor_style.h
+  engine/rs_interactor_style.cc
   ui/mainwindow.h
   ui/mainwindow.cc
   ui/menu_manager.h
