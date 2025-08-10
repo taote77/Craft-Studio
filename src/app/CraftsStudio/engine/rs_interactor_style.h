@@ -11,32 +11,34 @@ class vtkPropPicker;
 class RSInteractorStyle : public vtkInteractorStyleTrackballActor
 {
 public:
-    static RSInteractorStyle *New();
-    vtkTypeMacro(RSInteractorStyle, vtkInteractorStyleTrackballActor);
+  static RSInteractorStyle* New();
+  vtkTypeMacro(RSInteractorStyle, vtkInteractorStyleTrackballActor);
 
-    void SetRenderer(vtkSmartPointer<vtkRenderer> renderer);
+  void SetRenderer(vtkSmartPointer<vtkRenderer> renderer);
 
-    void SetvtkPropPicker(vtkSmartPointer<vtkPropPicker> picker);
+  void SetvtkPropPicker(vtkSmartPointer<vtkPropPicker> picker);
 
-    void OnLeftButtonDown() override;
+  void OnLeftButtonDown() override;
 
-    void OnMouseMove() override;
+  void OnMouseMove() override;
 
-    void OnLeftButtonUp() override;
+  void OnLeftButtonUp() override;
 
-    void OnMouseWheelForward() override;
-    void OnMouseWheelBackward() override;
+  void OnMouseWheelForward() override;
+  void OnMouseWheelBackward() override;
+
+  void OnKeyPress() override;
 
 protected:
-    RSInteractorStyle();
-    ~RSInteractorStyle();
+  RSInteractorStyle();
+  ~RSInteractorStyle();
 
 private:
-    vtkSmartPointer<vtkRenderer> _renderer;
-    vtkSmartPointer<vtkPropPicker> _picker;
-    vtkSmartPointer<vtkProp3D> _picked_actor;
-    int _startX, _startY;
-    int _endX, _endY;
+  vtkSmartPointer<vtkRenderer> _renderer;
+  vtkSmartPointer<vtkPropPicker> _picker;
+  vtkSmartPointer<vtkProp3D> _picked_actor;
+  int _startX, _startY;
+  int _endX, _endY;
 };
 
 #endif // RS_INTERACTOR_STYLE_H

@@ -1,12 +1,20 @@
 #include "mainwindow.h"
 #include "menu_manager.h"
 
+#include <qdockwidget.h>
 #include <vtkDebugLeaks.h>
 #include <vtkDoubleArray.h>
+#include <vtkInteractorStyleFlight.h>
+#include <vtkInteractorStyleRubberBandZoom.h>
+#include <vtkInteractorStyleSwitch.h>
+#include <vtkInteractorStyleTrackballActor.h>
+#include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkPointData.h>
 #include <vtkProperty.h>
 
 #include "engine/rs_interactor_style.h"
+#include "engine/rs_interactor_switch.h"
+
 #include <QApplication>
 #include <QDebug>
 
@@ -14,6 +22,11 @@ MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
 {
   setupUI();
+}
+
+void MainWindow::contextMenuEvent(QContextMenuEvent* event)
+{
+  _right_button_menu->exec(QCursor::pos());
 }
 
 void MainWindow::setupUI()
@@ -28,17 +41,11 @@ void MainWindow::setupUI()
   menu_mgr->init(*this, *_action_factory);
 
   // dock
-  addDockWidget(Qt::LeftDockWidgetArea, &controlDock);
-
-  dockLayout = new QVBoxLayout();
-  layoutContainer.setLayout(dockLayout);
-
-  controlDock.setWidget(&layoutContainer);
-
-  // randomizeButton.setText("Randomize");
+  _project_tree = new ProjectTree(this);
+  addDockWidget(Qt::LeftDockWidgetArea, _project_tree);
 
   auto model_mgr = new ModelManager(this);
-  dockLayout->addWidget(model_mgr);
+  _project_tree->addWidget(model_mgr);
 
   // Render area.
   _vtkRenderWidget = new QVTKOpenGLNativeWidget();
@@ -68,13 +75,46 @@ void MainWindow::setupUI()
 
     interactor->RemoveAllObservers();
 
-    auto m_customStyle = vtkSmartPointer<RSInteractorStyle>::New();
-    m_customStyle->SetRenderer(_vtkRenderer);
-    interactor->SetInteractorStyle(m_customStyle);
+    auto custom_style = vtkSmartPointer<RSInteractorStyle>::New();
+
+    interactor->SetInteractorStyle(custom_style);
 
     _vtkRenderWidget->installEventFilter(this);
   }
-  //
+
+  _right_button_menu = new QMenu(this);
+
+  auto style_menu = _right_button_menu->addMenu("3D Interactor Style");
+
+  auto action = new QAction("Interact Style");
+  connect(action, &QAction::triggered, this,
+    [this]
+    {
+      auto style = vtkSmartPointer<vtkInteractorStyleTrackballActor>::New();
+      auto interactor = _vtkRenderWindow->GetInteractor();
+      interactor->SetInteractorStyle(style);
+    });
+  style_menu->addAction(action);
+
+  action = style_menu->addAction("Camera Track");
+  connect(action, &QAction::triggered, this,
+    [this]
+    {
+      auto style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+      auto interactor = _vtkRenderWindow->GetInteractor();
+      interactor->SetInteractorStyle(style);
+    });
+  style_menu->addAction(action);
+
+  action = style_menu->addAction("Rubber Band Zoom");
+  connect(action, &QAction::triggered, this,
+    [this]
+    {
+      auto style = vtkSmartPointer<vtkInteractorStyleRubberBandZoom>::New();
+      auto interactor = _vtkRenderWindow->GetInteractor();
+      interactor->SetInteractorStyle(style);
+    });
+  style_menu->addAction(action);
 }
 
 void MainWindow::exit()

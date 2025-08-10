@@ -8,15 +8,15 @@
 class RSInteractorStyleTrackCamera : public vtkInteractorStyleTrackballCamera
 {
 public:
-    static RSInteractorStyleTrackCamera *New();
-    vtkTypeMacro(RSInteractorStyleTrackCamera, vtkInteractorStyleTrackballCamera);
+  static RSInteractorStyleTrackCamera* New();
+  vtkTypeMacro(RSInteractorStyleTrackCamera, vtkInteractorStyleTrackballCamera);
 
-    void SetRenderer(vtkSmartPointer<vtkRenderer> renderer);
+  void SetRenderer(vtkSmartPointer<vtkRenderer> renderer);
 
 private:
-    vtkSmartPointer<vtkRenderer> _renderer;
-    int _startX, _startY;
-    int _endX, _endY;
+  vtkSmartPointer<vtkRenderer> _renderer;
+  int _startX, _startY;
+  int _endX, _endY;
 };
 
 #endif // RS_INTERACTORSTYLE_TRACKCAMERA_H

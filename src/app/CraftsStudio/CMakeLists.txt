@@ -19,23 +19,32 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Quick LinguistTools R
 
 add_executable(${PROJECT_NAME}
   main.cc
+  engine/rs_interactor_switch.h
+  engine/rs_interactor_switch.cc
   engine/rs_interactor_style.h
   engine/rs_interactor_style.cc
+  engine/rs_transform_gizmo.h
+  engine/rs_transform_gizmo.cc
   ui/mainwindow.h
   ui/mainwindow.cc
   ui/menu_manager.h
   ui/menu_manager.cc
   ui/model_viewer.h
   ui/model_viewer.cc
+  ui/project_tree.h
+  ui/project_tree.cc
+  ui/model_manager.h
+  ui/model_manager.cc
   actionfactory.h
   actionfactory.cc
-  model_manager.h
-  model_manager.cc
+
   # ${TS_FILES}
 )
 
-target_compile_definitions(${PROJECT_NAME}
-  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
+target_compile_definitions(${PROJECT_NAME}  PRIVATE 
+  $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>
+)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
   Qt${QT_VERSION_MAJOR}::Core
   Qt${QT_VERSION_MAJOR}::Quick

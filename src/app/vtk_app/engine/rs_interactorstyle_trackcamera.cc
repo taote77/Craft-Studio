@@ -2,7 +2,7 @@
 
 #include <vtkBuffer.h>
 
-vtkStandardNewMacro(RSInteractorStyleTrackCamera);
+// vtkStandardNewMacro(RSInteractorStyleTrackCamera);
 
 void RSInteractorStyleTrackCamera::SetRenderer(vtkSmartPointer<vtkRenderer> renderer)
 {
