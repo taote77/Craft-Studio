@@ -17,6 +17,7 @@
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkMatrix4x4.h>
 #include <vtkPropPicker.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
@@ -53,6 +54,8 @@ private:
   vtkSmartPointer<vtkGenericOpenGLRenderWindow> _vtkRenderWindow{ nullptr };
 
   vtkSmartPointer<vtkRenderer> _vtkRenderer{ nullptr };
+
+  vtkSmartPointer<vtkMatrix4x4> _planeMatrix{ nullptr };
 
   std::mt19937 _rand_eng{ 0 };
 

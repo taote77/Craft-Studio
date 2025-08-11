@@ -69,6 +69,13 @@ void MainWindow::setupUI()
 
   _vtkRenderWindow->AddRenderer(_vtkRenderer);
 
+  _planeMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
+  _planeMatrix->SetElement(0, 3, 0.0); // X轴平移
+  _planeMatrix->SetElement(1, 3, 0.0); // Y轴平移
+  _planeMatrix->SetElement(2, 3, 0.0); // Z轴平移
+
+  // vtkSmartPointer<vtkActor> planeActor = CreatePlaneActor(_planeMatrix); // 自定义平面创建函数
+
   // 自定义交互
   {
     auto interactor = _vtkRenderWindow->GetInteractor();
@@ -76,6 +83,9 @@ void MainWindow::setupUI()
     interactor->RemoveAllObservers();
 
     auto custom_style = vtkSmartPointer<RSInteractorStyle>::New();
+    custom_style->SetMovePlane(_planeMatrix);
+
+    custom_style->SetRenderer(_vtkRenderer);
 
     interactor->SetInteractorStyle(custom_style);
 

@@ -2,6 +2,7 @@
 
 #include <QDebug>
 #include <iostream>
+#include <qdebug.h>
 #include <qglobal.h>
 
 #include <qnumeric.h>
@@ -33,64 +34,100 @@ void RSInteractorStyle::SetvtkPropPicker(vtkSmartPointer<vtkPropPicker> picker)
 
 void RSInteractorStyle::OnLeftButtonDown()
 {
-  // 获取鼠标位置
-  int* event_pos = this->Interactor->GetEventPosition();
+  // 记录初始位置
+  m_startPos[0] = this->Interactor->GetEventPosition()[0];
+  m_startPos[1] = this->Interactor->GetEventPosition()[1];
 
-  _startX = event_pos[0];
-  _startY = event_pos[1];
+  // 获取当前平面变换矩阵
+  m_initialMatrix = m_planeMatrix;
 
-  qDebug() << "Left button down at (" << this->_startX << ", " << this->_startY << ")";
+  // 标记操作类型
+  m_isDragging = true;
 
-  if (!_picker)
-  {
-    qInfo() << "Picker is not set, cannot pick actor.";
-    // return;
-  }
-
-  // _picker->Pick(this->_startX, this->_startY, 0, _renderer);
-
-  // vtkProp3D* pickedActor = vtkProp3D::SafeDownCast(this->_picker->GetActor());
-  // if (_picker)
-  // {
-  //   // _picked_actor = vtkProp3D::SafeDownCast(this->_picker->GetActor());
-  //   qDebug() << "Picked actor:";
-  //   // 这里可以添加更多逻辑来处理被选中的演员
-  // }
-  // 调用基类方法
-  this->Superclass::OnLeftButtonDown();
+  // 调用基类处理
+  Superclass::OnLeftButtonDown();
 }
 
 void RSInteractorStyle::OnMouseMove()
 {
-  int* event_pos = this->Interactor->GetEventPosition();
+  if (!m_isDragging)
+  {
+    qDebug() << "not drag";
+    return;
+  }
+  int* pos = this->Interactor->GetEventPosition();
 
-  int x = event_pos[0];
-  int y = event_pos[1];
-  // qDebug() << "Mouse moved to (" << x << ", " << y << ")";
+  m_endPos[0] = pos[0];
+  m_endPos[1] = pos[1];
 
-  this->Superclass::OnMouseMove();
+  double dx = pos[0] - m_startPos[0];
+  double dy = pos[1] - m_startPos[1];
+
+  // 检测Ctrl键状态
+  bool ctrlPressed = this->Interactor->GetShiftKey() || this->Interactor->GetControlKey();
+
+  if (ctrlPressed)
+  {
+    // qDebug() << "Ctrl+mouse move:" << dx << " " << dy;
+    // 旋转操作
+    // RotatePlane(dx, dy);
+  }
+  else
+  {
+    // qDebug() << "mouse move:" << dx << " " << dy;
+    // 平移操作
+    // TranslatePlane(dx, dy);
+  }
+
+  auto renderer = this->Interactor->FindPokedRenderer(m_startPos[0], m_startPos[1]);
+  if (renderer)
+  {
+
+    qDebug() << "mouse move dddddddddddd:" << dx << " " << dy;
+    auto camera = renderer->GetActiveCamera();
+
+    // 获取相机当前参数
+    double* focalPoint = camera->GetFocalPoint();
+    double* position = camera->GetPosition();
+    double viewUp[3];
+    camera->GetViewUp(viewUp);
+
+    // 计算平移向量 (根据屏幕坐标变化计算世界坐标变化)
+    double scale = 0.01; // 平移灵敏度，值越大平移越快
+    double translateX = -dx * scale;
+    double translateY = dy * scale; // Y轴方向相反，因为屏幕坐标Y向下
+
+    // 计算与视图平面平行的平移向量
+    double right[3];
+    vtkMath::Cross(camera->GetViewPlaneNormal(), viewUp, right);
+    vtkMath::Normalize(right);
+
+    // 计算新的位置和焦点
+    double newPosition[3], newFocalPoint[3];
+    for (int i = 0; i < 3; i++)
+    {
+      newPosition[i] = position[i] + translateX * right[i] + translateY * viewUp[i];
+      newFocalPoint[i] = focalPoint[i] + translateX * right[i] + translateY * viewUp[i];
+    }
+
+    // 设置新的相机参数
+    camera->SetPosition(newPosition);
+    camera->SetFocalPoint(newFocalPoint);
+
+    // 重新渲染
+    renderer->ResetCameraClippingRange();
+    this->Interactor->Render();
+  }
+
+  // 更新视图
+  _renderer->Render();
 }
 
 void RSInteractorStyle::OnLeftButtonUp()
 {
-  int* event_pos = this->Interactor->GetEventPosition();
 
-  _endX = event_pos[0];
-  _endY = event_pos[1];
-
-  qDebug() << "Left button up at (" << _endX << ", " << _endY << ")";
-
-  // 计算平移量
-  int dx = this->_endX - this->_startX;
-  int dy = this->_endY - this->_startY;
-  // 更新图像的位置
-  qDebug() << "dx = " << dx << ", dy = " << dy;
-  // this->Renderer->ResetCameraClippingRange();
-  // this->Renderer->GetActiveCamera()->Translate(dx, dy, 0);
-  // this->Renderer->ResetCameraClippingRange();
-  // this->RenderWindow->Render();
-
-  this->Superclass::OnLeftButtonUp();
+  m_isDragging = false;
+  Superclass::OnLeftButtonUp();
 }
 
 void RSInteractorStyle::OnMouseWheelForward()
@@ -174,4 +211,48 @@ RSInteractorStyle::RSInteractorStyle() {}
 RSInteractorStyle::~RSInteractorStyle()
 {
   qDebug() << "RSInteractorStyle::~RSInteractorStyle()";
+}
+
+void RSInteractorStyle::TranslatePlane(double dx, double dy)
+{
+  vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+
+  matrix->DeepCopy(m_initialMatrix);
+
+  // 根据视口比例计算平移量
+  vtkSmartPointer<vtkRenderWindow> renWin = this->Interactor->GetRenderWindow();
+
+  double scale = renWin->GetSize()[0] / 1000.0;
+  matrix->SetElement(0, 3, m_initialMatrix->GetElement(0, 3) + dx * scale);
+  matrix->SetElement(1, 3, m_initialMatrix->GetElement(1, 3) + dy * scale);
+
+  m_planeMatrix = matrix;
+}
+
+// 平面旋转
+void RSInteractorStyle::RotatePlane(double dx, double dy)
+{
+  vtkSmartPointer<vtkMatrix4x4> rotation = vtkSmartPointer<vtkMatrix4x4>::New();
+
+  // 计算旋转角度（根据视口比例）
+  vtkSmartPointer<vtkRenderWindow> renWin = this->Interactor->GetRenderWindow();
+  double scale = renWin->GetSize()[0] / 1000.0;
+
+  double angleX = -dy * scale * 0.5; // Y轴旋转
+  double angleY = dx * scale * 0.5;  // X轴旋转
+
+  // 构建旋转矩阵
+  vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+
+  transform->RotateX(angleX);
+  transform->RotateY(angleY);
+
+  transform->GetMatrix(rotation);
+
+  // 组合变换矩阵
+  vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+
+  vtkMatrix4x4::Multiply4x4(m_initialMatrix, rotation, matrix);
+
+  m_planeMatrix = matrix;
 }
