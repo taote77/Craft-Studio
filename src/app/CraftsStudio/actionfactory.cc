@@ -7,6 +7,8 @@
 #include <qapplication.h>
 #include <vtkActor.h>
 #include <vtkAlgorithm.h>
+#include <vtkCamera.h>
+#include <vtkCenterOfMass.h>
 #include <vtkConeSource.h>
 #include <vtkCubeSource.h>
 #include <vtkCylinderSource.h>
@@ -191,18 +193,41 @@ void ActionFactory::openSTLFile()
   }
 
   auto reader = vtkSmartPointer<vtkSTLReader>::New();
-
   reader->SetFileName(path.toStdString().c_str());
-
   reader->Update();
 
+  auto center_calculator = vtkSmartPointer<vtkCenterOfMass>::New();
+  center_calculator->SetInputData(reader->GetOutput());
+  center_calculator->SetUseScalarsAsWeights(false); //  # 几何中心（非质量加权）
+  center_calculator->Update();
+  auto model_center = center_calculator->GetCenter(); //  # 获取质心坐标 [x,y,z]
+
+  auto transform = vtkSmartPointer<vtkTransform>::New();
+  transform->Translate(-model_center[0], -model_center[1], -model_center[2]); //  # 反向平移
+
+  auto transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  transform_filter->SetInputConnection(reader->GetOutputPort());
+  transform_filter->SetTransform(transform);
+  transform_filter->Update();
+
   auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper->SetInputConnection(reader->GetOutputPort());
+  //  mapper->SetInputConnection(reader->GetOutputPort());
+  mapper->SetInputConnection(transform_filter->GetOutputPort());
 
   auto actor = vtkSmartPointer<vtkActor>::New();
   actor->SetMapper(mapper);
 
   _vtkRenderer->AddActor(actor);
+
+  auto camera = _vtkRenderer->GetActiveCamera();
+  camera->SetFocalPoint(0, 0, 0); // # 焦点置于原点
+  camera->SetPosition(0, 0, 500); // # 调整摄像机位置（避免模型过近）
+  camera->SetViewUp(0, 1, 0);     //  # 设置垂直方向
+
+  // render
+  // _vtkRenderer->Render();
+
+  _vtkRenderWindow->Render();
 }
 
 void ActionFactory::openOBJFile()

@@ -50,11 +50,13 @@ void RSInteractorStyle::OnLeftButtonDown()
 
 void RSInteractorStyle::OnMouseMove()
 {
+
   if (!m_isDragging)
   {
-    qDebug() << "not drag";
+    // qDebug() << "not drag";
     return;
   }
+
   int* pos = this->Interactor->GetEventPosition();
 
   m_endPos[0] = pos[0];
@@ -63,64 +65,66 @@ void RSInteractorStyle::OnMouseMove()
   double dx = pos[0] - m_startPos[0];
   double dy = pos[1] - m_startPos[1];
 
-  // 检测Ctrl键状态
-  bool ctrlPressed = this->Interactor->GetShiftKey() || this->Interactor->GetControlKey();
+  // 获取当前渲染器和相机
+  auto renderer = this->Interactor->FindPokedRenderer(m_startPos[0], m_startPos[1]);
+  if (!renderer)
+    return;
 
-  if (ctrlPressed)
+  auto camera = renderer->GetActiveCamera();
+  double* focalPoint = camera->GetFocalPoint();
+  double* position = camera->GetPosition();
+
+  // 计算视口尺寸
+  int* size = renderer->GetSize();
+  double viewWidth = size[0];
+  double viewHeight = size[1];
+
+  // 根据VTK标准实现旋转逻辑[1,4](@ref)
+  if (this->Interactor->GetControlKey()) // Ctrl键触发旋转
   {
     // qDebug() << "Ctrl+mouse move:" << dx << " " << dy;
-    // 旋转操作
-    // RotatePlane(dx, dy);
+
+    // 计算旋转角度（根据视口比例调整灵敏度）
+    constexpr double rotate_scale = 0.01; // 平移灵敏度
+
+    double deltaAzimuth = -dx * rotate_scale / viewWidth * 360.0;    // 水平旋转
+    double deltaElevation = -dy * rotate_scale / viewHeight * 360.0; // 垂直旋转
+
+    // 执行旋转操作
+    camera->Azimuth(deltaAzimuth);
+    camera->Elevation(deltaElevation);
+
+    // 保持视图向上方向正交化
+    camera->OrthogonalizeViewUp();
   }
-  else
+  else // 默认平移操作
   {
     // qDebug() << "mouse move:" << dx << " " << dy;
-    // 平移操作
-    // TranslatePlane(dx, dy);
-  }
 
-  auto renderer = this->Interactor->FindPokedRenderer(m_startPos[0], m_startPos[1]);
-  if (renderer)
-  {
+    // 平移参数设置
+    constexpr double scale = 0.01; // 平移灵敏度
+    double translateX = dx * scale;
+    double translateY = -dy * scale; // Y轴方向相反
 
-    qDebug() << "mouse move dddddddddddd:" << dx << " " << dy;
-    auto camera = renderer->GetActiveCamera();
-
-    // 获取相机当前参数
-    double* focalPoint = camera->GetFocalPoint();
-    double* position = camera->GetPosition();
-    double viewUp[3];
-    camera->GetViewUp(viewUp);
-
-    // 计算平移向量 (根据屏幕坐标变化计算世界坐标变化)
-    double scale = 0.01; // 平移灵敏度，值越大平移越快
-    double translateX = -dx * scale;
-    double translateY = dy * scale; // Y轴方向相反，因为屏幕坐标Y向下
-
-    // 计算与视图平面平行的平移向量
-    double right[3];
-    vtkMath::Cross(camera->GetViewPlaneNormal(), viewUp, right);
+    // 计算平移向量
+    double right[3], viewUp[3];
+    vtkMath::Cross(camera->GetViewPlaneNormal(), camera->GetViewUp(), right);
     vtkMath::Normalize(right);
 
-    // 计算新的位置和焦点
+    // 更新相机位置和焦点
     double newPosition[3], newFocalPoint[3];
     for (int i = 0; i < 3; i++)
     {
-      newPosition[i] = position[i] + translateX * right[i] + translateY * viewUp[i];
-      newFocalPoint[i] = focalPoint[i] + translateX * right[i] + translateY * viewUp[i];
+      newPosition[i] = position[i] + translateX * right[i] + translateY * camera->GetViewUp()[i];
+      newFocalPoint[i] = focalPoint[i] + translateX * right[i] + translateY * camera->GetViewUp()[i];
     }
 
-    // 设置新的相机参数
     camera->SetPosition(newPosition);
     camera->SetFocalPoint(newFocalPoint);
-
-    // 重新渲染
-    renderer->ResetCameraClippingRange();
-    this->Interactor->Render();
   }
 
-  // 更新视图
-  _renderer->Render();
+  renderer->ResetCameraClippingRange(); // 更新视图参数
+  this->Interactor->Render();
 }
 
 void RSInteractorStyle::OnLeftButtonUp()
@@ -132,78 +136,46 @@ void RSInteractorStyle::OnLeftButtonUp()
 
 void RSInteractorStyle::OnMouseWheelForward()
 {
-
-  qDebug() << "OnMouseWheelForward";
-
-  if (_picker)
-  {
-    // double scaleFactor = 1.2;
-    // qDebug() << "Picked actor:";
-    // auto transform = vtkSmartPointer<vtkTransform>::New();
-    // transform->Scale(scaleFactor, scaleFactor, scaleFactor);
-
-    // _picked_actor->SetUserTransform(transform);
-  }
-
-  qDebug() << "OnMouseWheelForward moved to ";
-
-  // this->_renderer->GetActiveCamera()->Zoom(1.2);
-  // this->_renderer->ResetCameraClippingRange();
-  // this->Interactor->Render();
-
   this->Superclass::OnMouseWheelForward();
 }
 
 void RSInteractorStyle::OnMouseWheelBackward()
 {
-
-  qDebug() << "OnMouseWheelBackward";
-  if (_picker)
-  {
-    // double scaleFactor = 1 / 1.2;
-    // qDebug() << "Picked actor:";
-    // auto transform = vtkSmartPointer<vtkTransform>::New();
-    // transform->Scale(scaleFactor, scaleFactor, scaleFactor);
-    // // 应用变换
-    // _picked_actor->SetUserTransform(transform);
-  }
-
-  qDebug() << "OnMouseWheelBackward moved to ";
-
-  // this->_renderer->GetActiveCamera()->Zoom(1 / 1.2);
-  // this->_renderer->ResetCameraClippingRange();
-  // this->Interactor->Render();
-
   this->Superclass::OnMouseWheelBackward();
 }
 
 void RSInteractorStyle::OnKeyPress()
 {
-  //
   auto interactor = this->GetInteractor();
-
   char key = interactor->GetKeyCode();
 
   qDebug() << "OnKeyPress key = " << key;
 
-  switch (key)
+  auto renderer = this->Interactor->FindPokedRenderer(m_startPos[0], m_startPos[1]);
+  if (!renderer)
   {
-    // case 'W': // 前移视图
-    //   this->GetDefaultRenderer()->GetActiveCamera()->Dolly(1.1);
-    //   break;
-    // case 'S': // 后移视图
-    //   this->GetDefaultRenderer()->GetActiveCamera()->Dolly(0.9);
-    //   break;
-    // case 'R': // 重置视图
-    //   this->GetDefaultRenderer()->ResetCamera();
-    //   break;
-    // default:
-    //   break;
+    return;
   }
 
-  interactor->Render();
+  switch (key)
+  {
+    case 'w': // 前移视图
+      renderer->GetActiveCamera()->Dolly(1.1);
+      break;
+    case 's': // 后移视图
+      renderer->GetActiveCamera()->Dolly(0.9);
+      break;
+    case 'r': // 重置视图
+      renderer->ResetCamera();
+      break;
+    default:
+      break;
+  }
 
-  this->Superclass::OnKeyPress();
+  renderer->ResetCameraClippingRange(); // 更新视图参数
+  this->Interactor->Render();
+
+  // this->Superclass::OnKeyPress();
 }
 
 RSInteractorStyle::RSInteractorStyle() {}

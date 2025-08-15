@@ -12,7 +12,7 @@ AlwaysBreakAfterDefinitionReturnType: None
 BreakBeforeBraces: Allman
 BinPackArguments: true
 BinPackParameters: true
-ColumnLimit: 100
+ColumnLimit: 120
 SpaceAfterTemplateKeyword: true
 Standard: c++17
 StatementMacros:

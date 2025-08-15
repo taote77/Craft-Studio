@@ -17,6 +17,7 @@ class RSInteractorStyle : public vtkInteractorStyleTrackballCamera
 {
 public:
   static RSInteractorStyle* New();
+
   vtkTypeMacro(RSInteractorStyle, vtkInteractorStyleTrackballCamera);
 
   void SetRenderer(vtkSmartPointer<vtkRenderer> renderer);
@@ -37,12 +38,14 @@ protected:
   void OnLeftButtonUp() override;
 
   void OnMouseWheelForward() override;
+
   void OnMouseWheelBackward() override;
 
   void OnKeyPress() override;
 
 protected:
   RSInteractorStyle();
+
   ~RSInteractorStyle();
 
   // 平面平移
