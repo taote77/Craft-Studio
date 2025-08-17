@@ -1,8 +1,8 @@
-#ifndef RS_INTERACTOR_STYLE_H
-#define RS_INTERACTOR_STYLE_H
+#ifndef RS_INTERACTOR_TRACKBALL_ACTOR_STYLE_H
+#define RS_INTERACTOR_TRACKBALL_ACTOR_STYLE_H
 
 #include <vtkBuffer.h>
-#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkInteractorStyleTrackballActor.h>
 #include <vtkMatrix4x4.h>
 #include <vtkProp3D.h>
 #include <vtkRenderWindow.h>
@@ -13,12 +13,12 @@
 
 class vtkPropPicker;
 
-class RSInteractorStyle : public vtkInteractorStyleTrackballCamera
+class RSInteractorTrackActor : public vtkInteractorStyleTrackballActor
 {
 public:
-  static RSInteractorStyle* New();
+  static RSInteractorTrackActor* New();
 
-  vtkTypeMacro(RSInteractorStyle, vtkInteractorStyleTrackballCamera);
+  vtkTypeMacro(RSInteractorTrackActor, vtkInteractorStyleTrackballActor);
 
   void SetRenderer(vtkSmartPointer<vtkRenderer> renderer);
 
@@ -44,9 +44,9 @@ protected:
   void OnKeyPress() override;
 
 protected:
-  RSInteractorStyle();
+  RSInteractorTrackActor();
 
-  ~RSInteractorStyle();
+  ~RSInteractorTrackActor();
 
   // 平面平移
   void TranslatePlane(double dx, double dy);
@@ -68,4 +68,4 @@ private:
   int m_endPos[2];
 };
 
-#endif // RS_INTERACTOR_STYLE_H
+#endif // RS_INTERACTOR_TRACKBALL_ACTOR_STYLE_H

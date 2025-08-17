@@ -18,8 +18,6 @@ public:
     _vtkRenderWindow = vtkRenderWindow;
   }
 
-  void setVtkRenderer(vtkSmartPointer<vtkRenderer> vtkRenderer) { _vtkRenderer = vtkRenderer; }
-
 public slots:
 
   void exitApp();
@@ -49,8 +47,6 @@ signals:
 
 private:
   vtkSmartPointer<vtkGenericOpenGLRenderWindow> _vtkRenderWindow{ nullptr };
-
-  vtkSmartPointer<vtkRenderer> _vtkRenderer{ nullptr };
 };
 
 #endif // ACTIONFACTORY_H

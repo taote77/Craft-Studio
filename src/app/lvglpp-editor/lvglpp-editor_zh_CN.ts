@@ -95,18 +95,26 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../CraftsStudio/ui/menu_manager.cc" line="13"/>
+        <location filename="../CraftsStudio/ui/menu_manager.cc" line="14"/>
         <source>&amp;File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../CraftsStudio/ui/menu_manager.cc" line="18"/>
+        <location filename="../CraftsStudio/ui/menu_manager.cc" line="29"/>
         <source>&amp;Edit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../CraftsStudio/ui/menu_manager.cc" line="41"/>
+        <location filename="../CraftsStudio/ui/menu_manager.cc" line="52"/>
         <source>&amp;Model</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ProjectTree</name>
+    <message>
+        <location filename="../CraftsStudio/ui/project_tree.cc" line="20"/>
+        <source>项目</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

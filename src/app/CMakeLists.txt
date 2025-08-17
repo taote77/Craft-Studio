@@ -6,3 +6,5 @@ add_subdirectory(CraftsStudio)
 
 add_subdirectory(lvglpp-editor)
 
+
+add_subdirectory(ui-test)

@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/images/model_item.png</file>
+        <file>resources/platform.stl</file>
+    </qresource>
+    <qresource prefix="/image">
+        <file>resources/images/model_item.png</file>
+    </qresource>
+</RCC>

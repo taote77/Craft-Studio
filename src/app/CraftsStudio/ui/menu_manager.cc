@@ -10,10 +10,21 @@ void MenuManager::init(MainWindow& main_win, ActionFactory& action_fact)
 {
   auto menu_bar = main_win.menuBar();
 
+  // file menu
   auto menu_file = menu_bar->addMenu(tr("&File"));
   auto open_action = menu_file->addAction("&Open");
+
+  auto open_stl_action = menu_file->addAction("Open STL File");
+  connect(open_stl_action, &QAction::triggered, &action_fact, &ActionFactory::openSTLFile);
+
+  auto open_obj_action = menu_file->addAction("Open OBJ File");
+  connect(open_obj_action, &QAction::triggered, &action_fact, &ActionFactory::openOBJFile);
+
+  menu_file->addSeparator();
   auto exit_action = menu_file->addAction("&Exit");
   connect(exit_action, &QAction::triggered, &action_fact, &ActionFactory::exitApp);
+
+  // file menu end
 
   auto menu_edit = menu_bar->addMenu(tr("&Edit"));
 
@@ -39,11 +50,11 @@ void MenuManager::init(MainWindow& main_win, ActionFactory& action_fact)
   connect(model_clear, &QAction::triggered, &action_fact, &ActionFactory::clearScene);
 
   auto menu_model = menu_bar->addMenu(tr("&Model"));
-  auto open_stl_action = menu_model->addAction("Open STL File");
+  // auto open_stl_action = menu_model->addAction("Open STL File");
   connect(open_stl_action, &QAction::triggered, &action_fact, &ActionFactory::openSTLFile);
 
-  auto open_obj_action = menu_model->addAction("Open OBJ File");
+  // auto open_obj_action = menu_model->addAction("Open OBJ File");
   connect(open_obj_action, &QAction::triggered, &action_fact, &ActionFactory::openOBJFile);
 
-    // add set add
+  // add set add
 }

@@ -5,8 +5,9 @@
 #include <QTreeView>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <qtreeview.h>
 
-class ModelManager : public QTreeWidget
+class ModelManager : public QTreeView
 {
   Q_OBJECT
 public:

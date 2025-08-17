@@ -1,24 +1,39 @@
 #ifndef PROJECT_TREE_H
 #define PROJECT_TREE_H
 
-#include <QDockWidget>
-#include <QVBoxLayout>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QStandardItemModel>
+#include <QTreeView>
 
-class ProjectTree : public QDockWidget
+#include "engine/rs_scene_object.h"
+#include "tree_model.h"
+
+class ProjectTree : public QTreeView
 {
   Q_OBJECT
+
 public:
   explicit ProjectTree(QWidget* parent = nullptr);
 
-  void addWidget(QWidget* widget, int stretch = 0, Qt::Alignment alignment = Qt::Alignment());
-
 protected:
-  void InitUi();
+  void contextMenuEvent(QContextMenuEvent* event) override;
+
+private slots:
+  void renameRootItem();
+
+  void addRootNode(SceneObject* obj);
+
+  void removeNode(SceneObject* obj);
+
+  void onItemActivated(const QModelIndex& index);
+
+  void onItemSelected(const QModelIndex& index);
 
 private:
-  QVBoxLayout* _vbox_layout;
-
-  QWidget* _container_widget;
+  // QStandardItemModel* _model;
+  TreeModel* _model;
+  QMenu* _context_menu;
 };
 
 #endif // PROJECT_TREE_H

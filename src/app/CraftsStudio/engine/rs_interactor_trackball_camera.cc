@@ -1,4 +1,4 @@
-#include "rs_interactor_style.h"
+#include "rs_interactor_trackball_camera.h"
 
 #include <QDebug>
 #include <iostream>
@@ -20,19 +20,19 @@
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 
-vtkStandardNewMacro(RSInteractorStyle);
+vtkStandardNewMacro(RSInteractorTrackCamera);
 
-void RSInteractorStyle::SetRenderer(vtkSmartPointer<vtkRenderer> renderer)
+void RSInteractorTrackCamera::SetRenderer(vtkSmartPointer<vtkRenderer> renderer)
 {
   _renderer = renderer;
 }
 
-void RSInteractorStyle::SetvtkPropPicker(vtkSmartPointer<vtkPropPicker> picker)
+void RSInteractorTrackCamera::SetvtkPropPicker(vtkSmartPointer<vtkPropPicker> picker)
 {
   _picker = picker;
 }
 
-void RSInteractorStyle::OnLeftButtonDown()
+void RSInteractorTrackCamera::OnLeftButtonDown()
 {
   // 记录初始位置
   m_startPos[0] = this->Interactor->GetEventPosition()[0];
@@ -48,7 +48,7 @@ void RSInteractorStyle::OnLeftButtonDown()
   Superclass::OnLeftButtonDown();
 }
 
-void RSInteractorStyle::OnMouseMove()
+void RSInteractorTrackCamera::OnMouseMove()
 {
 
   if (!m_isDragging)
@@ -127,24 +127,24 @@ void RSInteractorStyle::OnMouseMove()
   this->Interactor->Render();
 }
 
-void RSInteractorStyle::OnLeftButtonUp()
+void RSInteractorTrackCamera::OnLeftButtonUp()
 {
 
   m_isDragging = false;
   Superclass::OnLeftButtonUp();
 }
 
-void RSInteractorStyle::OnMouseWheelForward()
+void RSInteractorTrackCamera::OnMouseWheelForward()
 {
   this->Superclass::OnMouseWheelForward();
 }
 
-void RSInteractorStyle::OnMouseWheelBackward()
+void RSInteractorTrackCamera::OnMouseWheelBackward()
 {
   this->Superclass::OnMouseWheelBackward();
 }
 
-void RSInteractorStyle::OnKeyPress()
+void RSInteractorTrackCamera::OnKeyPress()
 {
   auto interactor = this->GetInteractor();
   char key = interactor->GetKeyCode();
@@ -178,14 +178,14 @@ void RSInteractorStyle::OnKeyPress()
   // this->Superclass::OnKeyPress();
 }
 
-RSInteractorStyle::RSInteractorStyle() {}
+RSInteractorTrackCamera::RSInteractorTrackCamera() {}
 
-RSInteractorStyle::~RSInteractorStyle()
+RSInteractorTrackCamera::~RSInteractorTrackCamera()
 {
-  qDebug() << "RSInteractorStyle::~RSInteractorStyle()";
+  qDebug() << "RSInteractorTrackCamera::~RSInteractorTrackCamera()";
 }
 
-void RSInteractorStyle::TranslatePlane(double dx, double dy)
+void RSInteractorTrackCamera::TranslatePlane(double dx, double dy)
 {
   vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New();
 
@@ -202,7 +202,7 @@ void RSInteractorStyle::TranslatePlane(double dx, double dy)
 }
 
 // 平面旋转
-void RSInteractorStyle::RotatePlane(double dx, double dy)
+void RSInteractorTrackCamera::RotatePlane(double dx, double dy)
 {
   vtkSmartPointer<vtkMatrix4x4> rotation = vtkSmartPointer<vtkMatrix4x4>::New();
 

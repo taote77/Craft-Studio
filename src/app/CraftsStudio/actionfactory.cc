@@ -1,10 +1,12 @@
 #include "actionfactory.h"
+#include "engine/rs_scene_manager.h"
 
+#include <QApplication>
 #include <QDebug>
 #include <QFileDialog>
 #include <QTemporaryFile>
 
-#include <qapplication.h>
+#include <qfileinfo.h>
 #include <vtkActor.h>
 #include <vtkAlgorithm.h>
 #include <vtkCamera.h>
@@ -187,6 +189,7 @@ void ActionFactory::openSTLFile()
   // select stl file
   const QString& path = QFileDialog::getOpenFileName(
     nullptr, "Open STL File", QApplication::applicationDirPath(), "STL Files (*.stl)");
+
   if (path.isEmpty())
   {
     return;
@@ -211,21 +214,28 @@ void ActionFactory::openSTLFile()
   transform_filter->Update();
 
   auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  //  mapper->SetInputConnection(reader->GetOutputPort());
   mapper->SetInputConnection(transform_filter->GetOutputPort());
 
   auto actor = vtkSmartPointer<vtkActor>::New();
   actor->SetMapper(mapper);
 
-  _vtkRenderer->AddActor(actor);
+  auto manager = SceneManager::getInstance();
 
-  auto camera = _vtkRenderer->GetActiveCamera();
+  QFileInfo finfo(path);
+  manager->addObject(new SceneObject(finfo.fileName(), actor));
+
+  auto renderer = _vtkRenderWindow->GetRenderers()->GetFirstRenderer();
+  if (!renderer)
+  {
+    return;
+  }
+
+  renderer->AddActor(actor);
+
+  auto camera = renderer->GetActiveCamera();
   camera->SetFocalPoint(0, 0, 0); // # 焦点置于原点
   camera->SetPosition(0, 0, 500); // # 调整摄像机位置（避免模型过近）
   camera->SetViewUp(0, 1, 0);     //  # 设置垂直方向
-
-  // render
-  // _vtkRenderer->Render();
 
   _vtkRenderWindow->Render();
 }
@@ -265,7 +275,13 @@ void ActionFactory::openOBJFile()
   actor->GetProperty()->SetColor(1.0, 0.0, 0.0); // 设置红色
   actor->GetProperty()->SetOpacity(0.9);         // 设置透明度
 
-  _vtkRenderer->AddActor(actor);
+  auto renderer = _vtkRenderWindow->GetRenderers()->GetFirstRenderer();
+  if (!renderer)
+  {
+    return;
+  }
+
+  renderer->AddActor(actor);
 
   _vtkRenderWindow->Render();
 }
