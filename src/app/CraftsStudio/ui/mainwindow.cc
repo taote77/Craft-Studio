@@ -1,10 +1,13 @@
 #include "mainwindow.h"
+
 #include "engine/rs_interactor_switch.h"
 #include "engine/rs_interactor_trackball_actor.h"
 #include "engine/rs_interactor_trackball_camera.h"
 #include "engine/rs_scene_manager.h"
-#include "menu_manager.h"
+
+#include "ui/menu_manager.h"
 #include "ui/project_tree.h"
+#include "ui/slice_panel.h"
 #include "ui/transform_panel.h"
 
 #include <QApplication>
@@ -74,13 +77,6 @@ void MainWindow::setupUI()
 
   _vtkRenderWindow->AddRenderer(_vtkRenderer);
 
-  _planeMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
-  _planeMatrix->SetElement(0, 3, 0.0); // X轴平移
-  _planeMatrix->SetElement(1, 3, 0.0); // Y轴平移
-  _planeMatrix->SetElement(2, 3, 0.0); // Z轴平移
-
-  // vtkSmartPointer<vtkActor> planeActor = CreatePlaneActor(_planeMatrix); // 自定义平面创建函数
-
   {
     auto transform_panel = new TransformPanel(_vtkRenderWidget);
     transform_panel->move(10, 50);
@@ -111,6 +107,12 @@ void MainWindow::setupUI()
     // modeChanged
   }
 
+  {
+    auto slice_panel = new SlicePanel(_vtkRenderWidget);
+    slice_panel->resize(600, 150);
+    slice_panel->move(300, 0);
+  }
+
   // 自定义交互
   {
     auto interactor = _vtkRenderWindow->GetInteractor();
@@ -118,7 +120,6 @@ void MainWindow::setupUI()
     interactor->RemoveAllObservers();
 
     auto custom_style = vtkSmartPointer<RSInteractorTrackCamera>::New();
-    custom_style->SetMovePlane(_planeMatrix);
 
     custom_style->SetRenderer(_vtkRenderer);
 

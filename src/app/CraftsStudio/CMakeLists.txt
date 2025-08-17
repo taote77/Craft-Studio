@@ -45,6 +45,8 @@ add_executable(${PROJECT_NAME}
   ui/tree_model.cc
   ui/transform_panel.h
   ui/transform_panel.cc
+  ui/slice_panel.h
+  ui/slice_panel.cc
   actionfactory.h
   actionfactory.cc
   app.qrc

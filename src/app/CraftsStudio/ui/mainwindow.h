@@ -52,8 +52,6 @@ private:
 
   vtkSmartPointer<vtkRenderer> _vtkRenderer{ nullptr };
 
-  vtkSmartPointer<vtkMatrix4x4> _planeMatrix{ nullptr };
-
   std::mt19937 _rand_eng{ 0 };
 
   // 定义菜单
