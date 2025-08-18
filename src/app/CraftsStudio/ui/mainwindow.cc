@@ -100,6 +100,9 @@ void MainWindow::setupUI()
         {
           auto custom_style = vtkSmartPointer<RSInteractorTrackActor>::New();
           custom_style->SetRenderer(_vtkRenderer);
+
+          vtkSmartPointer<vtkPropPicker> picker = vtkSmartPointer<vtkPropPicker>::New();
+          custom_style->SetvtkPropPicker(picker);
           interactor->SetInteractorStyle(custom_style);
         }
       });

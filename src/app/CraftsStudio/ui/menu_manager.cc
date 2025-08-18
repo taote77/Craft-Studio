@@ -49,12 +49,12 @@ void MenuManager::init(MainWindow& main_win, ActionFactory& action_fact)
   auto model_clear = model_add->addAction("Clear Scene");
   connect(model_clear, &QAction::triggered, &action_fact, &ActionFactory::clearScene);
 
-  auto menu_model = menu_bar->addMenu(tr("&Model"));
+  // auto menu_model = menu_bar->addMenu(tr("&Model"));
   // auto open_stl_action = menu_model->addAction("Open STL File");
-  connect(open_stl_action, &QAction::triggered, &action_fact, &ActionFactory::openSTLFile);
+  // connect(open_stl_action, &QAction::triggered, &action_fact, &ActionFactory::openSTLFile);
 
   // auto open_obj_action = menu_model->addAction("Open OBJ File");
-  connect(open_obj_action, &QAction::triggered, &action_fact, &ActionFactory::openOBJFile);
+  // connect(open_obj_action, &QAction::triggered, &action_fact, &ActionFactory::openOBJFile);
 
   // add set add
 }

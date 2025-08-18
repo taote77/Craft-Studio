@@ -5,6 +5,7 @@
 #include <vtkInteractorStyleTrackballActor.h>
 #include <vtkMatrix4x4.h>
 #include <vtkProp3D.h>
+#include <vtkPropPicker.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
@@ -47,6 +48,10 @@ protected:
   RSInteractorTrackActor();
 
   ~RSInteractorTrackActor();
+
+private:
+  double m_highlightColor[3] = {1.0, 0.0, 0.0}; // 高亮颜色（红色）
+  vtkSmartPointer<vtkProperty> m_originalProperty; // 保存原始属性
 
   // 平面平移
   void TranslatePlane(double dx, double dy);
