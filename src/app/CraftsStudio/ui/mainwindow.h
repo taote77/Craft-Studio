@@ -1,8 +1,7 @@
 #ifndef MAINWINOW_H
 #define MAINWINOW_H
 
-#include "actionfactory.h"
-#include "model_manager.h"
+#include "action_factory.h"
 #include "project_tree.h"
 
 #include <QDockWidget>
@@ -17,6 +16,7 @@
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkMatrix4x4.h>
 #include <vtkPropPicker.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
@@ -44,9 +44,7 @@ signals:
 private:
   ActionFactory* _action_factory{ nullptr };
 
-  ProjectTree* _project_tree;
-
-  QWidget layoutContainer;
+  QDockWidget* _left_dock;
 
   QPointer<QVTKOpenGLNativeWidget> _vtkRenderWidget;
 

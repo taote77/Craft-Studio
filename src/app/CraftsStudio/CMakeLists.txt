@@ -8,12 +8,12 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Quick LinguistTools REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Quick LinguistTools REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Gui Quick LinguistTools REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Gui Quick LinguistTools REQUIRED)
 
 # set(TS_FILES cv-app_zh_CN.ts)
 
@@ -21,8 +21,14 @@ add_executable(${PROJECT_NAME}
   main.cc
   engine/rs_interactor_switch.h
   engine/rs_interactor_switch.cc
-  engine/rs_interactor_style.h
-  engine/rs_interactor_style.cc
+  engine/rs_interactor_trackball_actor.h
+  engine/rs_interactor_trackball_actor.cc
+  engine/rs_interactor_trackball_camera.h
+  engine/rs_interactor_trackball_camera.cc
+  engine/rs_scene_object.h
+  engine/rs_scene_object.cc
+  engine/rs_scene_manager.h
+  engine/rs_scene_manager.cc
   engine/rs_transform_gizmo.h
   engine/rs_transform_gizmo.cc
   ui/mainwindow.h
@@ -35,10 +41,15 @@ add_executable(${PROJECT_NAME}
   ui/project_tree.cc
   ui/model_manager.h
   ui/model_manager.cc
-  actionfactory.h
-  actionfactory.cc
-
-  # ${TS_FILES}
+  ui/tree_model.h
+  ui/tree_model.cc
+  ui/transform_panel.h
+  ui/transform_panel.cc
+  ui/slice_panel.h
+  ui/slice_panel.cc
+  action_factory.h
+  action_factory.cc
+  app.qrc
 )
 
 target_compile_definitions(${PROJECT_NAME}  PRIVATE 
@@ -49,6 +60,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   Qt${QT_VERSION_MAJOR}::Core
   Qt${QT_VERSION_MAJOR}::Quick
   Qt${QT_VERSION_MAJOR}::Widgets
+  Qt${QT_VERSION_MAJOR}::Gui
 )
 
 # qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
