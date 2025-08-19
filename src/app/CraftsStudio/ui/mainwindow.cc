@@ -93,7 +93,7 @@ void MainWindow::setupUI()
         if (mode == EditMode::None)
         {
           auto custom_style = vtkSmartPointer<RSInteractorTrackCamera>::New();
-          custom_style->SetRenderer(_vtkRenderer);
+          // custom_style->SetRenderer(_vtkRenderer);
           interactor->SetInteractorStyle(custom_style);
         }
         else
@@ -124,7 +124,7 @@ void MainWindow::setupUI()
 
     auto custom_style = vtkSmartPointer<RSInteractorTrackCamera>::New();
 
-    custom_style->SetRenderer(_vtkRenderer);
+    // custom_style->SetRenderer(_vtkRenderer);
 
     interactor->SetInteractorStyle(custom_style);
 

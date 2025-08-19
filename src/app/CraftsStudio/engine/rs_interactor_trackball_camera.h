@@ -20,16 +20,6 @@ public:
 
   vtkTypeMacro(RSInteractorTrackCamera, vtkInteractorStyleTrackballCamera);
 
-  void SetRenderer(vtkSmartPointer<vtkRenderer> renderer);
-
-  void SetvtkPropPicker(vtkSmartPointer<vtkPropPicker> picker);
-
-  void SetMovePlane(vtkSmartPointer<vtkMatrix4x4> planeMatrix)
-  {
-    //
-    m_planeMatrix = planeMatrix;
-  }
-
 protected:
   void OnLeftButtonDown() override;
 
@@ -48,21 +38,9 @@ protected:
 
   ~RSInteractorTrackCamera();
 
-  // 平面平移
-  void TranslatePlane(double dx, double dy);
-
-  void RotatePlane(double dx, double dy);
-
 private:
-  vtkSmartPointer<vtkRenderer> _renderer;
-  vtkSmartPointer<vtkPropPicker> _picker;
-  vtkSmartPointer<vtkProp3D> _picked_actor;
-  int _startX, _startY;
-  int _endX, _endY;
+  // vtkSmartPointer<vtkPropPicker> _picker;
 
-  //
-  vtkSmartPointer<vtkMatrix4x4> m_planeMatrix;
-  vtkSmartPointer<vtkMatrix4x4> m_initialMatrix;
   bool m_isDragging = false;
   int m_startPos[2];
   int m_endPos[2];
