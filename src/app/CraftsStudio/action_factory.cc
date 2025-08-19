@@ -1,12 +1,14 @@
-#include "actionfactory.h"
+#include "action_factory.h"
 #include "engine/rs_scene_manager.h"
 
 #include <QApplication>
 #include <QDebug>
 #include <QFileDialog>
 #include <QTemporaryFile>
-
+#include <qapplication.h>
+#include <qdebug.h>
 #include <qfileinfo.h>
+
 #include <vtkActor.h>
 #include <vtkAlgorithm.h>
 #include <vtkCamera.h>
@@ -17,18 +19,25 @@
 #include <vtkDataSetMapper.h>
 #include <vtkDoubleArray.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkImageAppend.h>
+#include <vtkImageData.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkMarchingCubes.h>
 #include <vtkMemoryResourceStream.h>
 #include <vtkNamedColors.h>
 #include <vtkNew.h>
 #include <vtkOBJReader.h>
+#include <vtkPNGReader.h>
 #include <vtkPlaneSource.h>
 #include <vtkPointData.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkPolyDataNormals.h>
 #include <vtkPropPicker.h>
 #include <vtkProperty.h>
+#include <vtkQuadricDecimation.h>
 #include <vtkRendererCollection.h>
 #include <vtkSTLReader.h>
+#include <vtkSTLWriter.h>
 #include <vtkSmartPointer.h>
 #include <vtkSphereSource.h>
 #include <vtkStringArray.h>
@@ -286,7 +295,106 @@ void ActionFactory::openOBJFile()
   _vtkRenderWindow->Render();
 }
 
-void ActionFactory::openGeneralModelFile() {}
+void ActionFactory::openGeneralModelFile()
+{
+  //
+}
+
+void ActionFactory::onConstructionFile()
+{
+  QString dir = "/home/heygears/workstation/MasterWay/build/target/bin/model_img/";
+
+  const int numSlices = 30;           // 切片总数
+  const double sliceThickness = 0.01; // 层厚0.01mm
+
+  // ========== 1. 读取并拼接切片 ==========
+  vtkSmartPointer<vtkImageAppend> appendFilter = vtkSmartPointer<vtkImageAppend>::New();
+  appendFilter->SetAppendAxis(2); // 沿Z轴拼接
+
+  for (int i = 1; i <= numSlices; ++i)
+  {
+    // 生成标准化文件名 (S000001_P1.png 格式)
+    std::ostringstream filenameStream;
+    filenameStream << "S" << std::setfill('0') << std::setw(6) << i << "_P1.png";
+    std::string filename = dir.toStdString() + filenameStream.str();
+
+    // 读取PNG图像
+    vtkSmartPointer<vtkPNGReader> reader = vtkSmartPointer<vtkPNGReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+
+    qDebug() << "filename: " << filename.c_str();
+
+    // 添加到拼接器
+    appendFilter->AddInputData(reader->GetOutput());
+  }
+
+  QApplication::processEvents();
+
+  appendFilter->Update();
+
+  // ========== 2. 设置三维体数据结构 ==========
+  vtkSmartPointer<vtkImageData> volumeData = appendFilter->GetOutput();
+  volumeData->SetSpacing(1.0, 1.0, sliceThickness); // Z轴层厚0.01mm [1,4](@ref)
+
+  // ========== 3. 三维重建（等值面提取） ==========
+  vtkSmartPointer<vtkMarchingCubes> mcFilter = vtkSmartPointer<vtkMarchingCubes>::New();
+  mcFilter->SetInputData(volumeData);
+  mcFilter->SetValue(0, 128); // 灰度阈值（根据实际图像调整）
+  mcFilter->ComputeNormalsOn();
+  mcFilter->Update();
+
+  // ========== 4. 法向量优化 ==========
+  vtkSmartPointer<vtkPolyDataNormals> normalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
+  normalsFilter->SetInputConnection(mcFilter->GetOutputPort());
+  normalsFilter->ComputePointNormalsOn();
+  normalsFilter->Update();
+
+  // 简化网格（缩减70%面片）
+  // auto decimator = vtkSmartPointer<vtkQuadricDecimation>::New();
+  // decimator->SetInputConnection(normalsFilter->GetOutputPort());
+  // decimator->SetTargetReduction(0.7);  // 缩减比例（0.7=70%）
+  // decimator->AttributeErrorMetricOn(); // 保留属性特征
+  // decimator->Update();
+
+  // ========== 创建可视化管线 ==========
+
+  // ========== 5. 导出为单一STL文件 ==========
+  vtkSmartPointer<vtkSTLWriter> stlWriter = vtkSmartPointer<vtkSTLWriter>::New();
+  stlWriter->SetFileName("merged_model.stl");
+  stlWriter->SetInputConnection(normalsFilter->GetOutputPort());
+  stlWriter->SetFileTypeToBinary(); // 二进制格式减小文件体积
+  stlWriter->Write();
+
+  vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
+  reader->SetFileName("merged_model.stl"); // 替换为你的STL文件路径
+  reader->Update();
+
+  // ========== 6. 可选：可视化模型（验证结果） ==========
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputConnection(reader->GetOutputPort());
+  mapper->ScalarVisibilityOff();
+
+  // 演员
+  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper);
+  actor->GetProperty()->SetColor(0.9, 0.7, 0.6); // 设置模型颜色（肉色）
+
+  auto renderer = _vtkRenderWindow->GetRenderers()->GetFirstRenderer();
+  if (!renderer)
+  {
+    return;
+  }
+
+  renderer->AddActor(actor);
+
+  auto camera = renderer->GetActiveCamera();
+  camera->SetFocalPoint(0, 0, 0); // # 焦点置于原点
+  camera->SetPosition(0, 0, 500); // # 调整摄像机位置（避免模型过近）
+  camera->SetViewUp(0, 1, 0);     //  # 设置垂直方向
+
+  _vtkRenderWindow->Render();
+}
 
 void ActionFactory::clearScene()
 {

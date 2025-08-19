@@ -47,8 +47,8 @@ add_executable(${PROJECT_NAME}
   ui/transform_panel.cc
   ui/slice_panel.h
   ui/slice_panel.cc
-  actionfactory.h
-  actionfactory.cc
+  action_factory.h
+  action_factory.cc
   app.qrc
 )
 

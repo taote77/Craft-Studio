@@ -40,6 +40,8 @@ public slots:
 
   void openGeneralModelFile();
 
+  void onConstructionFile();
+
   void clearScene();
 
 signals:

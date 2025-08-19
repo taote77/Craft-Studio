@@ -13,8 +13,20 @@ EditModeManager::EditModeManager(QObject* parent)
   _button_group->setExclusive(false);
 
   // 连接按钮点击信号
+
+#if QT_VERSION >= QT_VERSION_CHECK(5,15,0)
   connect(_button_group, QOverload<int>::of(&QButtonGroup::idClicked), this,
     &EditModeManager::onButtonClicked);
+#else
+  connect(_button_group, QOverload<int>::of(&QButtonGroup::buttonClicked), this,
+    &EditModeManager::onButtonClicked);
+#endif
+
+
+
+
+
+
 }
 
 void EditModeManager::initButtons(

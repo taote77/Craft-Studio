@@ -1,7 +1,7 @@
 #ifndef MAINWINOW_H
 #define MAINWINOW_H
 
-#include "actionfactory.h"
+#include "action_factory.h"
 #include "project_tree.h"
 
 #include <QDockWidget>
