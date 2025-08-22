@@ -80,6 +80,19 @@ if(NOT DEFINED VTK_QT_VERSION)
 endif()
 
 
+find_package(TBB REQUIRED)
+
+if(NOT TBB_FOUND)
+    message(FATAL_ERROR "Unable to find the TBB")
+else()
+    message("Found TBB ")
+    target_link_libraries(${PROJECT_NAME} PRIVATE TBB::tbb)
+endif()
+
+
+
+
+
 if(POLICY CMP0020)
   cmake_policy(SET CMP0020 NEW)
   cmake_policy(SET CMP0071 NEW)

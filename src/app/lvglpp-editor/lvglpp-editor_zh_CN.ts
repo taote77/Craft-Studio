@@ -106,7 +106,7 @@
     </message>
     <message>
         <location filename="../CraftsStudio/ui/menu_manager.cc" line="52"/>
-        <source>&amp;Model</source>
+        <source>3D &amp;Reconstruction</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

@@ -57,6 +57,13 @@ void RSInteractorTrackCamera::OnMouseMove()
     return;
   }
 
+
+  // 优化点2：仅在有按键按下时处理（减少计算量）
+  if (this->State != VTKIS_ROTATE &&
+        this->State != VTKIS_PAN) {
+    return;
+  }
+
   int* pos = this->Interactor->GetEventPosition();
 
   m_endPos[0] = pos[0];

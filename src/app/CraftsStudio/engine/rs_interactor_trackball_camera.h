@@ -10,6 +10,7 @@
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
+#include <vtkTimeStamp.h>
 
 class vtkPropPicker;
 
@@ -66,6 +67,8 @@ private:
   bool m_isDragging = false;
   int m_startPos[2];
   int m_endPos[2];
+
+
 };
 
 #endif // RS_INTERACTOR_STYLE_H

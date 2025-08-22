@@ -44,6 +44,10 @@ public slots:
 
   void clearScene();
 
+
+
+  /// method
+
 signals:
   void sigExit();
 

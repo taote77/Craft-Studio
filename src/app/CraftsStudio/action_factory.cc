@@ -302,10 +302,24 @@ void ActionFactory::openGeneralModelFile()
 
 void ActionFactory::onConstructionFile()
 {
-  QString dir = "/home/heygears/workstation/MasterWay/build/target/bin/model_img/";
+  const QString& dir = QFileDialog::getExistingDirectory(nullptr, "",QApplication::applicationDirPath());
+  if (dir.isEmpty())
+  {
+    return;
+  }
 
-  const int numSlices = 30;           // 切片总数
-  const double sliceThickness = 0.01; // 层厚0.01mm
+  // 计算像素尺寸
+  double build_platform_width = 192.0;
+  double build_platform_height = 108.0;
+
+  double pixel_x = 1920.0;
+  double pixel_y = 1080.0;
+  double pixelSizeX = build_platform_width / pixel_x;  // 192mm / 1920像素 = 0.1mm/像素
+  double pixelSizeY = build_platform_height / pixel_y; // 108mm / 1080像素 = 0.1mm/像素
+    // 50    / 500  =
+  double sliceThickness = 0.5;       // 每层厚度0.5mm
+
+  const int numSlices = 5;          // 切片总数
 
   // ========== 1. 读取并拼接切片 ==========
   vtkSmartPointer<vtkImageAppend> appendFilter = vtkSmartPointer<vtkImageAppend>::New();
@@ -316,26 +330,22 @@ void ActionFactory::onConstructionFile()
     // 生成标准化文件名 (S000001_P1.png 格式)
     std::ostringstream filenameStream;
     filenameStream << "S" << std::setfill('0') << std::setw(6) << i << "_P1.png";
-    std::string filename = dir.toStdString() + filenameStream.str();
+    std::string filename = dir.toStdString() + "/" + filenameStream.str();
 
     // 读取PNG图像
     vtkSmartPointer<vtkPNGReader> reader = vtkSmartPointer<vtkPNGReader>::New();
     reader->SetFileName(filename.c_str());
     reader->Update();
 
-    qDebug() << "filename: " << filename.c_str();
-
-    // 添加到拼接器
     appendFilter->AddInputData(reader->GetOutput());
   }
-
-  QApplication::processEvents();
 
   appendFilter->Update();
 
   // ========== 2. 设置三维体数据结构 ==========
   vtkSmartPointer<vtkImageData> volumeData = appendFilter->GetOutput();
-  volumeData->SetSpacing(1.0, 1.0, sliceThickness); // Z轴层厚0.01mm [1,4](@ref)
+  double spacing[3] = {pixelSizeX, pixelSizeY, sliceThickness};
+  volumeData->SetSpacing(spacing);
 
   // ========== 3. 三维重建（等值面提取） ==========
   vtkSmartPointer<vtkMarchingCubes> mcFilter = vtkSmartPointer<vtkMarchingCubes>::New();
@@ -349,15 +359,6 @@ void ActionFactory::onConstructionFile()
   normalsFilter->SetInputConnection(mcFilter->GetOutputPort());
   normalsFilter->ComputePointNormalsOn();
   normalsFilter->Update();
-
-  // 简化网格（缩减70%面片）
-  // auto decimator = vtkSmartPointer<vtkQuadricDecimation>::New();
-  // decimator->SetInputConnection(normalsFilter->GetOutputPort());
-  // decimator->SetTargetReduction(0.7);  // 缩减比例（0.7=70%）
-  // decimator->AttributeErrorMetricOn(); // 保留属性特征
-  // decimator->Update();
-
-  // ========== 创建可视化管线 ==========
 
   // ========== 5. 导出为单一STL文件 ==========
   vtkSmartPointer<vtkSTLWriter> stlWriter = vtkSmartPointer<vtkSTLWriter>::New();
