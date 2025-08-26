@@ -1,13 +1,11 @@
 #ifndef PROJECT_TREE_H
 #define PROJECT_TREE_H
 
-#include <QContextMenuEvent>
-#include <QMenu>
-#include <QStandardItemModel>
 #include <QTreeView>
 
-#include "engine/rs_scene_object.h"
-#include "tree_model.h"
+class TreeModel;
+class SceneObject;
+class QMenu;
 
 class ProjectTree : public QTreeView
 {
@@ -31,7 +29,6 @@ private slots:
   void onItemSelected(const QModelIndex& index);
 
 private:
-  // QStandardItemModel* _model;
   TreeModel* _model;
   QMenu* _context_menu;
 };

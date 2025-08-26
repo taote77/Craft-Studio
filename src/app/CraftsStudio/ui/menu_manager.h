@@ -1,8 +1,9 @@
 #ifndef MENUMANAGER_H
 #define MENUMANAGER_H
 
-#include "action_factory.h"
 #include "mainwindow.h"
+
+class ActionFactory;
 
 class MenuManager : public QObject
 {

@@ -27,7 +27,10 @@ public:
   explicit EditModeManager(QObject* parent = nullptr);
 
   // 初始化模式按钮
-  void initButtons(QToolButton* translateBtn, QToolButton* rotateBtn, QToolButton* scaleBtn);
+  void initButtons(QToolButton* translateBtn,
+                   QToolButton* rotateBtn,
+                   QToolButton* scaleBtn,
+                   QToolButton* clearBtn);
 
   // 设置当前模式
   void setCurrentMode(EditMode mode);
@@ -69,7 +72,7 @@ private:
   QToolButton* _move_button;
   QToolButton* _rotate_button;
   QToolButton* _scale_button;
-  QPushButton* _clear_button;
+  QToolButton* _clear_button;
 
   QSlider* rotateSlider;
   QLabel* rotateLabel;

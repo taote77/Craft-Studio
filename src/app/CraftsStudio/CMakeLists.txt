@@ -29,6 +29,8 @@ add_executable(${PROJECT_NAME}
   engine/rs_scene_object.cc
   engine/rs_scene_manager.h
   engine/rs_scene_manager.cc
+  engine/action_factory.h
+  engine/action_factory.cc
   engine/rs_transform_gizmo.h
   engine/rs_transform_gizmo.cc
   ui/mainwindow.h
@@ -47,8 +49,6 @@ add_executable(${PROJECT_NAME}
   ui/transform_panel.cc
   ui/slice_panel.h
   ui/slice_panel.cc
-  action_factory.h
-  action_factory.cc
   app.qrc
 )
 
@@ -78,6 +78,19 @@ endif()
 if(NOT DEFINED VTK_QT_VERSION)
   set(VTK_QT_VERSION 5)
 endif()
+
+
+find_package(TBB REQUIRED)
+
+if(NOT TBB_FOUND)
+    message(FATAL_ERROR "Unable to find the TBB")
+else()
+    message("Found TBB ")
+    target_link_libraries(${PROJECT_NAME} PRIVATE TBB::tbb)
+endif()
+
+
+
 
 
 if(POLICY CMP0020)

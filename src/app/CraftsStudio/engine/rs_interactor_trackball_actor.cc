@@ -179,9 +179,11 @@ void RSInteractorTrackActor::TranslatePlane(double dx, double dy)
   matrix->DeepCopy(m_initialMatrix);
 
   // 根据视口比例计算平移量
-  vtkSmartPointer<vtkRenderWindow> renWin = this->Interactor->GetRenderWindow();
+  vtkSmartPointer<vtkRenderWindow> render_window = this->Interactor->GetRenderWindow();
 
-  double scale = renWin->GetSize()[0] / 1000.0;
+  // const double ratio{ 1.0 };
+
+  double scale = render_window->GetSize()[0] / 1000.0;
   matrix->SetElement(0, 3, m_initialMatrix->GetElement(0, 3) + dx * scale);
   matrix->SetElement(1, 3, m_initialMatrix->GetElement(1, 3) + dy * scale);
 

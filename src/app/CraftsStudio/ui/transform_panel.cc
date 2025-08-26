@@ -22,39 +22,37 @@ EditModeManager::EditModeManager(QObject* parent)
     &EditModeManager::onButtonClicked);
 #endif
 
-
-
-
-
-
 }
 
 void EditModeManager::initButtons(
-  QToolButton* translateBtn, QToolButton* rotateBtn, QToolButton* scaleBtn)
+  QToolButton* translateBtn, QToolButton* rotateBtn, QToolButton* scaleBtn, QToolButton* clearBtn)
 {
-  if (!translateBtn || !rotateBtn || !scaleBtn)
+  if (!translateBtn || !rotateBtn || !scaleBtn|| !clearBtn)
     return;
 
   // 设置按钮为可选中状态
   translateBtn->setCheckable(true);
   rotateBtn->setCheckable(true);
   scaleBtn->setCheckable(true);
+  clearBtn->setCheckable(true);
 
   // 设置按钮图标（这里使用文本代替，实际项目中应使用QIcon）
   translateBtn->setText("移动");
   rotateBtn->setText("旋转");
   scaleBtn->setText("缩放");
+  clearBtn->setText("视图");
 
   // 将按钮添加到按钮组，并分配ID
   _button_group->addButton(translateBtn, static_cast<int>(EditMode::Translate));
   _button_group->addButton(rotateBtn, static_cast<int>(EditMode::Rotate));
   _button_group->addButton(scaleBtn, static_cast<int>(EditMode::Scale));
+  _button_group->addButton(clearBtn, static_cast<int>(EditMode::None));
 }
 
 void EditModeManager::setCurrentMode(EditMode mode)
 {
-  if (_current_mode == mode)
-    return;
+//  if (_current_mode == mode)
+//    return;
 
   // 取消之前选中的按钮
   if (_current_mode != EditMode::None)
@@ -66,7 +64,7 @@ void EditModeManager::setCurrentMode(EditMode mode)
 
   // 选中新的按钮
   _current_mode = mode;
-  if (_current_mode != EditMode::None)
+//  if (_current_mode != EditMode::None)
   {
     QAbstractButton* newButton = _button_group->button(static_cast<int>(_current_mode));
     if (newButton)
@@ -95,12 +93,12 @@ void EditModeManager::onButtonClicked(int id)
   EditMode clickedMode = static_cast<EditMode>(id);
 
   // 如果点击的按钮已被选中，则取消选择（进入无模式）
-  if (clickedButton->isChecked() && _current_mode == clickedMode)
-  {
-    clearSelection();
-  }
+//  if (clickedButton->isChecked() && _current_mode == clickedMode)
+//  {
+//    clearSelection();
+//  }
   // 否则切换到该模式
-  else
+//  else
   {
     setCurrentMode(clickedMode);
   }
@@ -126,26 +124,24 @@ void TransformPanel::setupUI()
   _move_button->setStyleSheet("QToolButton:checked { background-color: #0078d7; color: white; }");
   layout->addWidget(_move_button);
 
-  // _rotate_button = new QToolButton("旋转", this);
   _rotate_button = new QToolButton(this);
   _rotate_button->setCheckable(true);
   _rotate_button->setStyleSheet("QToolButton:checked { background-color: #0078d7; color: white; }");
   layout->addWidget(_rotate_button);
 
-  // _scale_button = new QToolButton("缩放", this);
   _scale_button = new QToolButton(this);
   _scale_button->setCheckable(true);
   _scale_button->setStyleSheet("QToolButton:checked { background-color: #0078d7; color: white; }");
   layout->addWidget(_scale_button);
 
-  _clear_button = new QPushButton("清除", this);
+  _clear_button = new QToolButton(this);
   _clear_button->setCheckable(true);
-  _clear_button->setStyleSheet("QPushButton:checked { background-color: #0078d7; color: white; }");
+  _clear_button->setStyleSheet("QToolButton:checked { background-color: #0078d7; color: white; }");
   layout->addWidget(_clear_button);
 
   _editmode_mgr = new EditModeManager(this);
 
-  _editmode_mgr->initButtons(_move_button, _rotate_button, _scale_button);
+  _editmode_mgr->initButtons(_move_button, _rotate_button, _scale_button, _clear_button);
 
   // 连接模式变化信号
   connect(_editmode_mgr, &EditModeManager::modeChanged, this,
@@ -171,18 +167,6 @@ void TransformPanel::setupUI()
 
       Q_EMIT modeChanged(mode);
     });
-
-  // 连接清除选择按钮
-  connect(_clear_button, &QToolButton::clicked, _editmode_mgr, &EditModeManager::clearSelection);
-
-  // // 旋转控件
-  // rotateLabel = new QLabel("旋转", this);
-  // rotateLabel->setStyleSheet("QLabel { background-color: #0078d7; color: white; }");
-
-  // layout->addWidget(rotateLabel);
-  // rotateSlider = new QSlider(Qt::Horizontal, this);
-  // rotateSlider->setRange(0, 360);
-  // layout->addWidget(rotateSlider);
 
   setLayout(layout);
 }

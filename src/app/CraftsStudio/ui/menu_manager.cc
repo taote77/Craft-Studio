@@ -1,4 +1,6 @@
 #include "menu_manager.h"
+#include "engine/action_factory.h"
+
 #include <QMenuBar>
 
 MenuManager::MenuManager(QObject* parent)
@@ -51,11 +53,10 @@ void MenuManager::init(MainWindow& main_win, ActionFactory& action_fact)
 
   auto menu_model = menu_bar->addMenu(tr("3D &Reconstruction"));
   auto merge_from_img_action = menu_model->addAction("Merge");
-  connect(
-    merge_from_img_action, &QAction::triggered, &action_fact, &ActionFactory::onConstructionFile);
+  connect(merge_from_img_action, &QAction::triggered, &action_fact, &ActionFactory::onConstructionFile);
 
-  // auto open_obj_action = menu_model->addAction("Open OBJ File");
-  // connect(open_obj_action, &QAction::triggered, &action_fact, &ActionFactory::openOBJFile);
+  auto contour_action = menu_model->addAction("Contour");
+  connect(contour_action, &QAction::triggered, &action_fact, &ActionFactory::onContourConstruct);
 
   // add set add
 }

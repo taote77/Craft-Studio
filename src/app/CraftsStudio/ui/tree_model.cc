@@ -241,9 +241,10 @@ Qt::ItemFlags TreeModel::flags(const QModelIndex& index) const
 
 QVariant TreeModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
+  (void)section;
   if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
   {
-    return "对象列表"; // 表头名称
+      return  tr("模型管理"); // 表头名称
   }
   return QVariant();
 }

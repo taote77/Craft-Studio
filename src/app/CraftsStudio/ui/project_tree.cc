@@ -1,19 +1,22 @@
 #include "project_tree.h"
 #include "engine/rs_scene_manager.h"
+#include "engine/rs_scene_object.h"
 #include "model_manager.h"
+#include "tree_model.h"
 
 #include <QAction>
 #include <QChar>
+#include <QContextMenuEvent>
 #include <QDebug>
 #include <QEvent>
 #include <QInputDialog>
+#include <QMenu>
 #include <QObject>
 #include <QStandardItemModel>
 
 ProjectTree::ProjectTree(QWidget* parent)
   : QTreeView(parent)
 {
-  // auto ff = new QStandardItemModel(this);
 
   ItemData root{ "root--", "模型" };
 
@@ -25,7 +28,6 @@ ProjectTree::ProjectTree(QWidget* parent)
 
   this->setModel(_model);
 
-  // 初始化右键菜单
   _context_menu = new QMenu(this);
   QAction* renameAction = new QAction("重命名", this);
   connect(renameAction, &QAction::triggered, this, &ProjectTree::renameRootItem);
@@ -62,8 +64,8 @@ void ProjectTree::renameRootItem()
   }
 
   bool ok{ false };
-  QString newName = QInputDialog::getText(dynamic_cast<QWidget*>(this), "重命名",
-    "输入新名称:", QLineEdit::Normal, currentIndex.data().toString(), &ok);
+  QString newName = QInputDialog::getText(
+    dynamic_cast<QWidget*>(this), "重命名", "输入新名称:", QLineEdit::Normal, currentIndex.data().toString(), &ok);
   if (ok && !newName.isEmpty())
   {
     _model->setData(currentIndex, newName);
