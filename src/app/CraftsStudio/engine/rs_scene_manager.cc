@@ -78,13 +78,102 @@ void SceneManager::setObjectVisible(SceneObject* obj, bool visible)
   }
 }
 
+// 通过Actor查找对象
+SceneObject* SceneManager::findObjectByActor(vtkActor* actor)
+{
+  return m_actorToObject.value(actor, nullptr);
+}
+
+// 设置变换模式
+void SceneManager::setTransformMode(TransformMode mode)
+{
+  if (m_transformMode != mode)
+  {
+    m_transformMode = mode;
+    emit transformModeChanged(mode);
+  }
+}
+
+// 清空所有选中状态
+void SceneManager::clearSelection()
+{
+  if (m_selectedObject)
+  {
+    setObjectSelected(m_selectedObject, false);
+    m_selectedObject = nullptr;
+    emit selectionChanged(nullptr);
+  }
+}
+
 void SceneManager::setObjectSelected(SceneObject* obj, bool selected)
 {
   if (obj && obj->_selected != selected)
   {
+    // 如果选择新对象，先取消之前的选中
+    if (selected && m_selectedObject && m_selectedObject != obj)
+    {
+      setObjectSelected(m_selectedObject, false);
+    }
+    
     obj->_selected = selected;
+    
     // 选中高亮（例如修改VTK属性）
-    obj->_property->SetColor(selected ? 1.0 : 0.5, 0, 0); // 选中变红
+    if (selected)
+    {
+      obj->_property->SetColor(1.0, 0.8, 0.0); // 选中时黄色高亮
+      obj->_property->SetAmbient(0.3); // 增加环境光增强高亮效果
+      m_selectedObject = obj;
+    }
+    else
+    {
+      obj->_property->SetColor(0.7, 0.7, 0.7); // 默认灰色
+      obj->_property->SetAmbient(0.1);
+      if (m_selectedObject == obj)
+      {
+        m_selectedObject = nullptr;
+      }
+    }
+    
     emit objectSelectionChanged(obj);
+    emit selectionChanged(m_selectedObject);
   }
+}
+
+// 设置对象平移
+void SceneManager::setObjectTranslation(SceneObject* obj, double x, double y, double z)
+{
+  if (!obj)
+    return;
+
+  // 应用平移变换到对象的actor
+  obj->_actor->SetPosition(x, y, z);
+  
+  // 发出几何变化信号
+  emit objectGeometryChanged(obj);
+}
+
+// 设置对象旋转
+void SceneManager::setObjectRotation(SceneObject* obj, double x, double y, double z)
+{
+  if (!obj)
+    return;
+
+  // 应用旋转变换到对象的actor
+  obj->_actor->SetOrientation(x, y, z);
+  
+  // 发出几何变化信号
+  emit objectGeometryChanged(obj);
+}
+
+// 设置对象缩放
+void SceneManager::setObjectScale(SceneObject* obj, double x, double y, double z)
+{
+  if (!obj)
+    return;
+
+  // 应用缩放变换到对象的actor
+  obj->_actor->SetScale(x, y, z);
+  
+  // 发出几何变化信号
+  emit objectGeometryChanged(obj);
 }

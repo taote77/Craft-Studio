@@ -11,12 +11,10 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
 include(cmake/global_build.cmake)
 
-
 add_subdirectory(src/app)
-
-
 
 # set(VTK_DEBUG_MODULE_LOADER ON) # 跟踪模块加载顺序
 

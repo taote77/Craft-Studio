@@ -19,10 +19,8 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Gui Quick LinguistToo
 
 add_executable(${PROJECT_NAME}
   main.cc
-  engine/rs_interactor_switch.h
-  engine/rs_interactor_switch.cc
-  engine/rs_interactor_trackball_actor.h
-  engine/rs_interactor_trackball_actor.cc
+  # engine/rs_interactor_switch.h
+  # engine/rs_interactor_switch.cc
   engine/rs_interactor_trackball_camera.h
   engine/rs_interactor_trackball_camera.cc
   engine/rs_scene_object.h
@@ -45,8 +43,6 @@ add_executable(${PROJECT_NAME}
   ui/tree_model.cc
   ui/transform_panel.h
   ui/transform_panel.cc
-  ui/slice_panel.h
-  ui/slice_panel.cc
   action_factory.h
   action_factory.cc
   app.qrc

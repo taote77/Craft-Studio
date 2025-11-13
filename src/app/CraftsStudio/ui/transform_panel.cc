@@ -147,6 +147,9 @@ void TransformPanel::setupUI()
 
   _editmode_mgr->initButtons(_move_button, _rotate_button, _scale_button);
 
+  // 创建变换数值输入框
+  createTransformInputs();
+
   // 连接模式变化信号
   connect(_editmode_mgr, &EditModeManager::modeChanged, this,
     [this](EditMode mode)
@@ -175,14 +178,210 @@ void TransformPanel::setupUI()
   // 连接清除选择按钮
   connect(_clear_button, &QToolButton::clicked, _editmode_mgr, &EditModeManager::clearSelection);
 
-  // // 旋转控件
-  // rotateLabel = new QLabel("旋转", this);
-  // rotateLabel->setStyleSheet("QLabel { background-color: #0078d7; color: white; }");
-
-  // layout->addWidget(rotateLabel);
-  // rotateSlider = new QSlider(Qt::Horizontal, this);
-  // rotateSlider->setRange(0, 360);
-  // layout->addWidget(rotateSlider);
-
   setLayout(layout);
+}
+
+void TransformPanel::createTransformInputs()
+{
+  // 位置输入框
+  m_positionLabel = new QLabel("位置", this);
+  layout->addWidget(m_positionLabel);
+  
+  QHBoxLayout* posLayout = new QHBoxLayout();
+  m_positionXEdit = new QLineEdit(this);
+  m_positionYEdit = new QLineEdit(this);
+  m_positionZEdit = new QLineEdit(this);
+  
+  m_positionXEdit->setPlaceholderText("X");
+  m_positionYEdit->setPlaceholderText("Y");
+  m_positionZEdit->setPlaceholderText("Z");
+  
+  posLayout->addWidget(m_positionXEdit);
+  posLayout->addWidget(m_positionYEdit);
+  posLayout->addWidget(m_positionZEdit);
+  layout->addLayout(posLayout);
+  
+  // 连接位置输入框信号
+  connect(m_positionXEdit, &QLineEdit::textChanged, this, &TransformPanel::onTranslationChanged);
+  connect(m_positionYEdit, &QLineEdit::textChanged, this, &TransformPanel::onTranslationChanged);
+  connect(m_positionZEdit, &QLineEdit::textChanged, this, &TransformPanel::onTranslationChanged);
+
+  // 旋转输入框
+  m_rotationLabel = new QLabel("旋转", this);
+  layout->addWidget(m_rotationLabel);
+  
+  QHBoxLayout* rotLayout = new QHBoxLayout();
+  m_rotationXEdit = new QLineEdit(this);
+  m_rotationYEdit = new QLineEdit(this);
+  m_rotationZEdit = new QLineEdit(this);
+  
+  m_rotationXEdit->setPlaceholderText("X");
+  m_rotationYEdit->setPlaceholderText("Y");
+  m_rotationZEdit->setPlaceholderText("Z");
+  
+  rotLayout->addWidget(m_rotationXEdit);
+  rotLayout->addWidget(m_rotationYEdit);
+  rotLayout->addWidget(m_rotationZEdit);
+  layout->addLayout(rotLayout);
+  
+  // 连接旋转输入框信号
+  connect(m_rotationXEdit, &QLineEdit::textChanged, this, &TransformPanel::onRotationChanged);
+  connect(m_rotationYEdit, &QLineEdit::textChanged, this, &TransformPanel::onRotationChanged);
+  connect(m_rotationZEdit, &QLineEdit::textChanged, this, &TransformPanel::onRotationChanged);
+
+  // 缩放输入框
+  m_scaleLabel = new QLabel("缩放", this);
+  layout->addWidget(m_scaleLabel);
+  
+  QHBoxLayout* scaleLayout = new QHBoxLayout();
+  m_scaleXEdit = new QLineEdit(this);
+  m_scaleYEdit = new QLineEdit(this);
+  m_scaleZEdit = new QLineEdit(this);
+  
+  m_scaleXEdit->setPlaceholderText("X");
+  m_scaleYEdit->setPlaceholderText("Y");
+  m_scaleZEdit->setPlaceholderText("Z");
+  
+  scaleLayout->addWidget(m_scaleXEdit);
+  scaleLayout->addWidget(m_scaleYEdit);
+  scaleLayout->addWidget(m_scaleZEdit);
+  layout->addLayout(scaleLayout);
+  
+  // 连接缩放输入框信号
+  connect(m_scaleXEdit, &QLineEdit::textChanged, this, &TransformPanel::onScaleChanged);
+  connect(m_scaleYEdit, &QLineEdit::textChanged, this, &TransformPanel::onScaleChanged);
+  connect(m_scaleZEdit, &QLineEdit::textChanged, this, &TransformPanel::onScaleChanged);
+  
+  // 初始时禁用输入框
+  enableTransformControls(false);
+}
+
+void TransformPanel::setSceneManager(SceneManager* manager)
+{
+  m_sceneManager = manager;
+  
+  if (m_sceneManager)
+  {
+    // 连接场景管理器信号
+    connect(m_sceneManager, &SceneManager::selectionChanged, 
+            this, &TransformPanel::onSelectionChanged);
+    connect(m_sceneManager, &SceneManager::transformModeChanged,
+            this, &TransformPanel::onTransformModeChanged);
+  }
+}
+
+void TransformPanel::updateSelection(SceneObject* selectedObject)
+{
+  m_currentObject = selectedObject;
+  updateTransformControls();
+}
+
+void TransformPanel::onTranslationChanged()
+{
+  if (m_updating || !m_currentObject || !m_sceneManager)
+    return;
+
+  m_updating = true;
+  
+  // 获取输入框中的变换值
+  double x = m_positionXEdit->text().toDouble();
+  double y = m_positionYEdit->text().toDouble();
+  double z = m_positionZEdit->text().toDouble();
+  
+  // 应用变换到当前对象
+  m_sceneManager->setObjectTranslation(m_currentObject, x, y, z);
+  
+  m_updating = false;
+  emit transformApplied();
+}
+
+void TransformPanel::onRotationChanged()
+{
+  if (m_updating || !m_currentObject || !m_sceneManager)
+    return;
+
+  m_updating = true;
+  
+  // 获取输入框中的旋转值
+  double x = m_rotationXEdit->text().toDouble();
+  double y = m_rotationYEdit->text().toDouble();
+  double z = m_rotationZEdit->text().toDouble();
+  
+  // 应用旋转到当前对象
+  m_sceneManager->setObjectRotation(m_currentObject, x, y, z);
+  
+  m_updating = false;
+  emit transformApplied();
+}
+
+void TransformPanel::onScaleChanged()
+{
+  if (m_updating || !m_currentObject || !m_sceneManager)
+    return;
+
+  m_updating = true;
+  
+  // 获取输入框中的缩放值
+  double x = m_scaleXEdit->text().toDouble();
+  double y = m_scaleYEdit->text().toDouble();
+  double z = m_scaleZEdit->text().toDouble();
+  
+  // 应用缩放到当前对象
+  m_sceneManager->setObjectScale(m_currentObject, x, y, z);
+  
+  m_updating = false;
+  emit transformApplied();
+}
+
+void TransformPanel::onSelectionChanged(SceneObject* selectedObject)
+{
+  updateSelection(selectedObject);
+}
+
+void TransformPanel::onTransformModeChanged(TransformMode mode)
+{
+  // 根据变换模式更新UI状态
+  // 这里可以根据需要实现模式切换的逻辑
+}
+
+void TransformPanel::updateTransformControls()
+{
+  if (!m_currentObject)
+  {
+    enableTransformControls(false);
+    return;
+  }
+
+  enableTransformControls(true);
+  
+  // 获取对象的变换信息并更新输入框
+  // 这里需要根据SceneObject的具体实现来获取变换信息
+  
+  // 暂时设置为默认值
+  m_positionXEdit->setText("0.0");
+  m_positionYEdit->setText("0.0");
+  m_positionZEdit->setText("0.0");
+  
+  m_rotationXEdit->setText("0.0");
+  m_rotationYEdit->setText("0.0");
+  m_rotationZEdit->setText("0.0");
+  
+  m_scaleXEdit->setText("1.0");
+  m_scaleYEdit->setText("1.0");
+  m_scaleZEdit->setText("1.0");
+}
+
+void TransformPanel::enableTransformControls(bool enabled)
+{
+  m_positionXEdit->setEnabled(enabled);
+  m_positionYEdit->setEnabled(enabled);
+  m_positionZEdit->setEnabled(enabled);
+  
+  m_rotationXEdit->setEnabled(enabled);
+  m_rotationYEdit->setEnabled(enabled);
+  m_rotationZEdit->setEnabled(enabled);
+  
+  m_scaleXEdit->setEnabled(enabled);
+  m_scaleYEdit->setEnabled(enabled);
+  m_scaleZEdit->setEnabled(enabled);
 }

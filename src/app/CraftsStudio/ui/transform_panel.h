@@ -3,6 +3,7 @@
 
 #include <QButtonGroup>
 #include <QLabel>
+#include <QLineEdit>
 #include <QObject>
 #include <QPushButton>
 #include <QSlider>
@@ -10,6 +11,8 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <qobjectdefs.h>
+
+#include "engine/rs_scene_manager.h"
 
 // 编辑模式枚举
 enum class EditMode
@@ -57,24 +60,67 @@ class TransformPanel : public QWidget
 
 public:
   explicit TransformPanel(QWidget* parent = nullptr);
+  
+  // 设置场景管理器
+  void setSceneManager(SceneManager* manager);
+  
+  // 更新选中对象信息
+  void updateSelection(SceneObject* selectedObject);
 
 signals:
   void modeChanged(EditMode newMode);
+  void transformApplied();
+
+public slots:
+  // 处理变换操作
+  void onTranslationChanged();
+  void onRotationChanged();
+  void onScaleChanged();
+
+private slots:
+  // 处理场景管理器信号
+  void onSelectionChanged(SceneObject* selectedObject);
+  void onTransformModeChanged(TransformMode mode);
 
 private:
   QVBoxLayout* layout;
-  QPushButton* _select_button;
-
+  
+  // 场景管理器
+  SceneManager* m_sceneManager = nullptr;
+  
+  // 模式管理
   EditModeManager* _editmode_mgr;
   QToolButton* _move_button;
   QToolButton* _rotate_button;
   QToolButton* _scale_button;
   QPushButton* _clear_button;
-
-  QSlider* rotateSlider;
-  QLabel* rotateLabel;
+  
+  // 变换数值输入
+  QLabel* m_positionLabel;
+  QLineEdit* m_positionXEdit;
+  QLineEdit* m_positionYEdit;
+  QLineEdit* m_positionZEdit;
+  
+  QLabel* m_rotationLabel;
+  QLineEdit* m_rotationXEdit;
+  QLineEdit* m_rotationYEdit;
+  QLineEdit* m_rotationZEdit;
+  
+  QLabel* m_scaleLabel;
+  QLineEdit* m_scaleXEdit;
+  QLineEdit* m_scaleYEdit;
+  QLineEdit* m_scaleZEdit;
+  
+  // 当前选中的对象
+  SceneObject* m_currentObject = nullptr;
+  
+  // 防止递归更新
+  bool m_updating = false;
 
   void setupUI();
+  void createTransformInputs();
+  void updateTransformControls();
+  void enableTransformControls(bool enabled);
 };
 
 #endif // __TRANSFORM_PANEL_H__

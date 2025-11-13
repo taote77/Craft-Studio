@@ -1,18 +1,11 @@
 #include "rs_interactor_trackball_camera.h"
+#include "rs_scene_manager.h"
+#include "rs_transform_gizmo.h"
 
 #include <QDebug>
-#include <iostream>
-#include <qdebug.h>
-#include <qglobal.h>
-
-#include <qnumeric.h>
-#include <vtkActor2D.h>
 #include <vtkCamera.h>
-#include <vtkImageData.h>
-#include <vtkImageMapper.h>
-#include <vtkInteractorStyleImage.h>
-#include <vtkNew.h>
-#include <vtkPNGReader.h>
+#include <vtkMath.h>
+#include <vtkMatrix4x4.h>
 #include <vtkPropPicker.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
@@ -32,16 +25,100 @@ void RSInteractorTrackCamera::SetvtkPropPicker(vtkSmartPointer<vtkPropPicker> pi
   _picker = picker;
 }
 
+void RSInteractorTrackCamera::SetSceneManager(SceneManager* manager)
+{
+  m_sceneManager = manager;
+}
+
+void RSInteractorTrackCamera::SetTransformGizmo(TransformGizmo* gizmo)
+{
+  m_transformGizmo = gizmo;
+}
+
+// 拾取操作
+vtkProp3D* RSInteractorTrackCamera::PickActor(int x, int y)
+{
+  if (!_picker || !_renderer)
+    return nullptr;
+
+  _picker->Pick(x, y, 0, _renderer);
+  return vtkProp3D::SafeDownCast(_picker->GetViewProp());
+}
+
+// 手柄拾取
+bool RSInteractorTrackCamera::PickGizmoHandle(int x, int y, int& handleType, int& axisIndex)
+{
+  if (!m_transformGizmo || !m_sceneManager || !m_sceneManager->getSelectedObject())
+    return false;
+
+  return m_transformGizmo->PickHandle(x, y, handleType, axisIndex);
+}
+
 void RSInteractorTrackCamera::OnLeftButtonDown()
 {
+  int x = this->Interactor->GetEventPosition()[0];
+  int y = this->Interactor->GetEventPosition()[1];
+
   // 记录初始位置
-  m_startPos[0] = this->Interactor->GetEventPosition()[0];
-  m_startPos[1] = this->Interactor->GetEventPosition()[1];
+  m_startPos[0] = x;
+  m_startPos[1] = y;
 
   // 获取当前平面变换矩阵
-  m_initialMatrix = m_planeMatrix;
+  if (m_planeMatrix)
+  {
+    m_initialMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
+    m_initialMatrix->DeepCopy(m_planeMatrix);
+  }
 
-  // 标记操作类型
+  // 首先检查是否拾取到操纵器手柄
+  if (m_sceneManager && m_sceneManager->getSelectedObject())
+  {
+    int handleType = -1, axisIndex = -1;
+    if (PickGizmoHandle(x, y, handleType, axisIndex))
+    {
+      // 开始操纵器交互
+      StartGizmoInteraction(x, y);
+      m_gizmoHandleType = handleType;
+      m_gizmoAxisIndex = axisIndex;
+      return;
+    }
+  }
+
+  // 检查是否拾取到模型
+  vtkProp3D* pickedActor = PickActor(x, y);
+  if (pickedActor && m_sceneManager)
+  {
+    SceneObject* selectedObject = m_sceneManager->findObjectByActor((vtkActor*)pickedActor);
+    if (selectedObject)
+    {
+      // 选择模型
+      m_sceneManager->setObjectSelected(selectedObject, true);
+      m_interactionState = OBJECT_SELECTION;
+
+      // 根据当前变换模式显示操纵器
+      if (m_transformGizmo)
+      {
+        m_transformGizmo->setTarget(selectedObject->_actor);
+        m_transformGizmo->setTransformMode((int)m_sceneManager->getTransformMode());
+        m_transformGizmo->show();
+      }
+
+      // 标记拖动开始
+      m_isDragging = true;
+      return;
+    }
+  }
+
+  // 如果没有拾取到任何对象，清空选择
+  if (m_sceneManager)
+  {
+    m_sceneManager->clearSelection();
+    if (m_transformGizmo)
+      m_transformGizmo->Hide();
+  }
+
+  // 默认相机控制模式
+  m_interactionState = CAMERA_MODE;
   m_isDragging = true;
 
   // 调用基类处理
@@ -50,27 +127,45 @@ void RSInteractorTrackCamera::OnLeftButtonDown()
 
 void RSInteractorTrackCamera::OnMouseMove()
 {
-
   if (!m_isDragging)
-  {
-    // qDebug() << "not drag";
     return;
-  }
-
-
-  // 优化点2：仅在有按键按下时处理（减少计算量）
-  if (this->State != VTKIS_ROTATE &&
-        this->State != VTKIS_PAN) {
-    return;
-  }
 
   int* pos = this->Interactor->GetEventPosition();
+  int x = pos[0];
+  int y = pos[1];
 
-  m_endPos[0] = pos[0];
-  m_endPos[1] = pos[1];
+  // 检查操纵器交互
+  if (m_isGizmoInteracting && m_transformGizmo && m_sceneManager &&
+    m_sceneManager->getSelectedObject())
+  {
+    UpdateGizmoInteraction(x, y);
+    return;
+  }
 
-  double dx = pos[0] - m_startPos[0];
-  double dy = pos[1] - m_startPos[1];
+  // 根据交互状态处理
+  switch (m_interactionState)
+  {
+    case CAMERA_MODE:
+      // 相机控制模式
+      HandleCameraMovement(x, y);
+      break;
+
+    case OBJECT_SELECTION:
+      // 对象选择模式（可以添加拖拽移动等操作）
+      break;
+
+    case GIZMO_INTERACTION:
+      // 操纵器交互模式
+      UpdateGizmoInteraction(x, y);
+      break;
+  }
+}
+
+// 处理相机移动
+void RSInteractorTrackCamera::HandleCameraMovement(int x, int y)
+{
+  double dx = x - m_startPos[0];
+  double dy = y - m_startPos[1];
 
   // 获取当前渲染器和相机
   auto renderer = this->Interactor->FindPokedRenderer(m_startPos[0], m_startPos[1]);
@@ -86,32 +181,25 @@ void RSInteractorTrackCamera::OnMouseMove()
   double viewWidth = size[0];
   double viewHeight = size[1];
 
-  // 根据VTK标准实现旋转逻辑[1,4](@ref)
+  // 根据VTK标准实现旋转逻辑
   if (this->Interactor->GetControlKey()) // Ctrl键触发旋转
   {
-    // qDebug() << "Ctrl+mouse move:" << dx << " " << dy;
-
     // 计算旋转角度（根据视口比例调整灵敏度）
-    constexpr double rotate_scale = 0.01; // 平移灵敏度
-
-    double deltaAzimuth = -dx * rotate_scale / viewWidth * 360.0;    // 水平旋转
-    double deltaElevation = -dy * rotate_scale / viewHeight * 360.0; // 垂直旋转
+    constexpr double rotate_scale = 0.01;
+    double deltaAzimuth = -dx * rotate_scale / viewWidth * 360.0;
+    double deltaElevation = -dy * rotate_scale / viewHeight * 360.0;
 
     // 执行旋转操作
     camera->Azimuth(deltaAzimuth);
     camera->Elevation(deltaElevation);
-
-    // 保持视图向上方向正交化
     camera->OrthogonalizeViewUp();
   }
   else // 默认平移操作
   {
-    // qDebug() << "mouse move:" << dx << " " << dy;
-
     // 平移参数设置
-    constexpr double scale = 0.01; // 平移灵敏度
+    constexpr double scale = 0.01;
     double translateX = dx * scale;
-    double translateY = -dy * scale; // Y轴方向相反
+    double translateY = -dy * scale;
 
     // 计算平移向量
     double right[3], viewUp[3];
@@ -123,21 +211,29 @@ void RSInteractorTrackCamera::OnMouseMove()
     for (int i = 0; i < 3; i++)
     {
       newPosition[i] = position[i] + translateX * right[i] + translateY * camera->GetViewUp()[i];
-      newFocalPoint[i] = focalPoint[i] + translateX * right[i] + translateY * camera->GetViewUp()[i];
+      newFocalPoint[i] =
+        focalPoint[i] + translateX * right[i] + translateY * camera->GetViewUp()[i];
     }
 
     camera->SetPosition(newPosition);
     camera->SetFocalPoint(newFocalPoint);
   }
 
-  renderer->ResetCameraClippingRange(); // 更新视图参数
+  renderer->ResetCameraClippingRange();
   this->Interactor->Render();
 }
 
 void RSInteractorTrackCamera::OnLeftButtonUp()
 {
+  // 结束操纵器交互
+  if (m_isGizmoInteracting)
+  {
+    EndGizmoInteraction();
+  }
 
   m_isDragging = false;
+  m_isGizmoInteracting = false;
+
   Superclass::OnLeftButtonUp();
 }
 
@@ -208,7 +304,6 @@ void RSInteractorTrackCamera::TranslatePlane(double dx, double dy)
   m_planeMatrix = matrix;
 }
 
-// 平面旋转
 void RSInteractorTrackCamera::RotatePlane(double dx, double dy)
 {
   vtkSmartPointer<vtkMatrix4x4> rotation = vtkSmartPointer<vtkMatrix4x4>::New();
@@ -234,4 +329,80 @@ void RSInteractorTrackCamera::RotatePlane(double dx, double dy)
   vtkMatrix4x4::Multiply4x4(m_initialMatrix, rotation, matrix);
 
   m_planeMatrix = matrix;
+}
+
+// 开始操纵器交互
+void RSInteractorTrackCamera::StartGizmoInteraction(int x, int y)
+{
+  if (!m_transformGizmo || !m_sceneManager || !m_sceneManager->getSelectedObject())
+    return;
+
+  m_isGizmoInteracting = true;
+  m_interactionState = GIZMO_INTERACTION;
+  m_startMousePos[0] = x;
+  m_startMousePos[1] = y;
+
+  // 保存初始变换状态
+  SceneObject* selectedObject = m_sceneManager->getSelectedObject();
+  if (selectedObject && selectedObject->_actor)
+  {
+    vtkTransform* transform = (vtkTransform*)selectedObject->_actor->GetUserTransform();
+    if (transform)
+    {
+      vtkMatrix4x4* matrix = transform->GetMatrix();
+      matrix->DeepCopy(m_startTransform);
+    }
+    else
+    {
+      // 如果没有变换，使用单位矩阵
+      vtkMatrix4x4::Identity(m_startTransform);
+    }
+  }
+}
+
+// 更新操纵器交互
+void RSInteractorTrackCamera::UpdateGizmoInteraction(int x, int y)
+{
+  if (!m_transformGizmo || !m_sceneManager || !m_sceneManager->getSelectedObject())
+    return;
+
+  SceneObject* selectedObject = m_sceneManager->getSelectedObject();
+  if (!selectedObject || !selectedObject->_actor)
+    return;
+
+  double dx = x - m_startMousePos[0];
+  double dy = y - m_startMousePos[1];
+
+  // 根据手柄类型执行变换
+  switch (m_gizmoHandleType)
+  {
+    case 0: // 平移
+      m_transformGizmo->ApplyTranslation(dx, dy, m_gizmoAxisIndex);
+      break;
+
+    case 1: // 旋转
+      m_transformGizmo->ApplyRotation(dx, dy, m_gizmoAxisIndex);
+      break;
+
+    case 2: // 缩放
+      m_transformGizmo->ApplyScale(dx, dy, m_gizmoAxisIndex);
+      break;
+  }
+
+  // 更新渲染
+  this->Interactor->Render();
+}
+
+// 结束操纵器交互
+void RSInteractorTrackCamera::EndGizmoInteraction()
+{
+  m_isGizmoInteracting = false;
+  m_gizmoHandleType = -1;
+  m_gizmoAxisIndex = -1;
+
+  // 发出变换完成信号
+  if (m_sceneManager && m_sceneManager->getSelectedObject())
+  {
+    emit m_sceneManager->objectGeometryChanged(m_sceneManager->getSelectedObject());
+  }
 }

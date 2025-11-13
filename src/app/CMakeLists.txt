@@ -4,7 +4,6 @@ add_subdirectory(cv_app)
 
 add_subdirectory(CraftsStudio)
 
-add_subdirectory(lvglpp-editor)
-
+add_subdirectory(clipper_app)
 
 # add_subdirectory(ui-test)

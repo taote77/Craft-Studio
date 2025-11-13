@@ -1,13 +1,13 @@
 #include "mainwindow.h"
 
-#include "engine/rs_interactor_switch.h"
-#include "engine/rs_interactor_trackball_actor.h"
+// #include "engine/rs_interactor_switch.h"
+// #include "engine/rs_interactor_trackball_actor.h"
 #include "engine/rs_interactor_trackball_camera.h"
 #include "engine/rs_scene_manager.h"
+#include "engine/rs_transform_gizmo.h"
 
 #include "ui/menu_manager.h"
 #include "ui/project_tree.h"
-#include "ui/slice_panel.h"
 #include "ui/transform_panel.h"
 
 #include <QApplication>
@@ -75,6 +75,9 @@ void MainWindow::setupUI()
 
   _vtkRenderer = vtkNew<vtkRenderer>();
 
+  // 设置渲染器背景颜色为白色
+  _vtkRenderer->SetBackground(1.0, 1.0, 1.0); // 白色背景
+
   _vtkRenderWindow->AddRenderer(_vtkRenderer);
 
   {
@@ -82,38 +85,38 @@ void MainWindow::setupUI()
     transform_panel->move(10, 50);
     transform_panel->resize(150, 600);
 
+    // 设置场景管理器
+    auto sceneManager = SceneManager::getInstance();
+    transform_panel->setSceneManager(sceneManager);
+
+    // 连接变换面板模式改变信号到场景管理器
     connect(transform_panel, &TransformPanel::modeChanged, this,
-      [this](EditMode mode)
+      [this, sceneManager](EditMode mode)
       {
         qDebug() << "当前模式:" << (int)mode;
 
-        auto interactor = _vtkRenderWindow->GetInteractor();
-        interactor->RemoveAllObservers();
-
-        if (mode == EditMode::None)
+        // 将EditMode转换为TransformMode并设置到场景管理器
+        TransformMode transformMode;
+        switch (mode)
         {
-          auto custom_style = vtkSmartPointer<RSInteractorTrackCamera>::New();
-          custom_style->SetRenderer(_vtkRenderer);
-          interactor->SetInteractorStyle(custom_style);
+          case EditMode::Translate:
+            transformMode = TransformMode::Translate;
+            break;
+          case EditMode::Rotate:
+            transformMode = TransformMode::Rotate;
+            break;
+          case EditMode::Scale:
+            transformMode = TransformMode::Scale;
+            break;
+          default:
+            transformMode = TransformMode::None;
+            break;
         }
-        else
-        {
-          auto custom_style = vtkSmartPointer<RSInteractorTrackActor>::New();
-          custom_style->SetRenderer(_vtkRenderer);
 
-          vtkSmartPointer<vtkPropPicker> picker = vtkSmartPointer<vtkPropPicker>::New();
-          custom_style->SetvtkPropPicker(picker);
-          interactor->SetInteractorStyle(custom_style);
-        }
+        sceneManager->setTransformMode(transformMode);
       });
 
     // modeChanged
-  }
-
-  {
-    auto slice_panel = new SlicePanel(_vtkRenderWidget);
-    slice_panel->resize(600, 150);
-    slice_panel->move(300, 0);
   }
 
   // 自定义交互
@@ -125,6 +128,15 @@ void MainWindow::setupUI()
     auto custom_style = vtkSmartPointer<RSInteractorTrackCamera>::New();
 
     custom_style->SetRenderer(_vtkRenderer);
+
+    // 设置场景管理器和变换操纵器
+    auto sceneManager = SceneManager::getInstance();
+    custom_style->SetSceneManager(sceneManager);
+
+    // 创建变换操纵器并添加到渲染器
+    auto transformGizmo = new TransformGizmo();
+    // transformGizmo->SetRenderer(_vtkRenderer);
+    custom_style->SetTransformGizmo(transformGizmo);
 
     interactor->SetInteractorStyle(custom_style);
 
