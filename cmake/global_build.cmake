@@ -2,6 +2,15 @@ include_guard(GLOBAL)
 include(CheckCXXCompilerFlag)
 
 
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets WebSockets REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets WebSockets  REQUIRED)
+
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/target/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/target/lib)
 set(PLUGIN_OUT_PATH ${PROJECT_BINARY_DIR}/target/plugin)

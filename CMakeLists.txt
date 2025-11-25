@@ -14,7 +14,69 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(cmake/global_build.cmake)
 
+
+
+
+find_package(QT NAMES Qt6 Qt5 COMPONENTS
+    Concurrent
+    DBus
+    Gui
+    Multimedia
+    Network
+    Qml
+    Quick
+    SerialBus
+    SerialPort
+    Sql
+    WebChannel
+    WebSockets
+    Widgets
+    Xml REQUIRED
+)
+
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS 
+    Concurrent
+    DBus
+    Gui
+    Multimedia
+    Network
+    Qml
+    Quick
+    SerialBus
+    SerialPort
+    Sql
+    WebChannel
+    WebSockets
+    Widgets
+    Xml REQUIRED
+)
+
+
+link_libraries(
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Concurrent
+    Qt${QT_VERSION_MAJOR}::DBus
+    Qt${QT_VERSION_MAJOR}::Gui
+    Qt${QT_VERSION_MAJOR}::Multimedia
+    Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Qml
+    Qt${QT_VERSION_MAJOR}::Quick
+    Qt${QT_VERSION_MAJOR}::SerialBus
+    Qt${QT_VERSION_MAJOR}::SerialPort
+    Qt${QT_VERSION_MAJOR}::Sql
+    Qt${QT_VERSION_MAJOR}::WebChannel
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Xml
+    Qt${QT_VERSION_MAJOR}::WebSockets
+)
+
+
 add_subdirectory(src/app)
+
+# add_subdirectory(src/libs)
+
+# add_subdirectory(src/sdk)
 
 # set(VTK_DEBUG_MODULE_LOADER ON) # 跟踪模块加载顺序
 

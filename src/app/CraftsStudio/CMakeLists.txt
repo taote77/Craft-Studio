@@ -23,12 +23,22 @@ add_executable(${PROJECT_NAME}
   # engine/rs_interactor_switch.cc
   engine/rs_interactor_trackball_camera.h
   engine/rs_interactor_trackball_camera.cc
+  engine/rs_interactor_v2.h
+  engine/rs_interactor_v2.cc
   engine/rs_scene_object.h
   engine/rs_scene_object.cc
+  engine/rs_scene_object_v2.h
+  engine/rs_scene_object_v2.cc
   engine/rs_scene_manager.h
   engine/rs_scene_manager.cc
+  engine/rs_scene_manager_v2.h
+  engine/rs_scene_manager_v2.cc
   engine/rs_transform_gizmo.h
   engine/rs_transform_gizmo.cc
+  engine/build_platform.h
+  engine/build_platform.cc
+  engine/file_importer.h
+  engine/file_importer.cc
   ui/mainwindow.h
   ui/mainwindow.cc
   ui/menu_manager.h
@@ -43,6 +53,8 @@ add_executable(${PROJECT_NAME}
   ui/tree_model.cc
   ui/transform_panel.h
   ui/transform_panel.cc
+  ui/plater_widget.h
+  ui/plater_widget.cc
   action_factory.h
   action_factory.cc
   app.qrc

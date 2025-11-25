@@ -66,6 +66,8 @@ signals:
 
   void selectedChanged(bool selected);
 
+  void geometryChanged(SceneObject* obj);
+
   void childAdded(SceneObject* child);
 
   void childRemoved(SceneObject* child);

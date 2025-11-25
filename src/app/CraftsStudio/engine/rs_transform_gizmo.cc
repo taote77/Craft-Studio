@@ -2,12 +2,17 @@
 #include <vtkProperty.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
+#include <vtkPropPicker.h>
+#include <vtkCamera.h>
+#include <vtkMath.h>
+#include <vtkCoordinate.h>
 #include <QDebug>
 
 TransformGizmo::TransformGizmo(QObject* parent)
     : QObject(parent)
 {
     m_transform = vtkSmartPointer<vtkTransform>::New();
+    m_picker = vtkSmartPointer<vtkPropPicker>::New();
     
     // 创建各种操纵器组件
     createTranslateGizmo();
@@ -30,6 +35,11 @@ TransformGizmo::~TransformGizmo()
     if (m_uniformScaleHandle) {
         m_uniformScaleHandle->Delete();
     }
+}
+
+void TransformGizmo::setRenderer(vtkRenderer* renderer)
+{
+    m_renderer = renderer;
 }
 
 void TransformGizmo::setTarget(vtkActor* target)
@@ -393,6 +403,239 @@ void TransformGizmo::setupHandleProperties(vtkActor* actor, double color[3])
     actor->SetVisibility(0); // 默认隐藏
 }
 
+// 视觉反馈功能实现
+void TransformGizmo::highlightHandle(GizmoHandleType handleType, int axisIndex)
+{
+    if (m_isHandleHighlighted && m_highlightedHandle == handleType && m_highlightedAxis == axisIndex) {
+        return; // 已经是当前高亮的手柄
+    }
+    
+    // 清除之前的高亮
+    clearHighlight();
+    
+    // 高亮新的手柄
+    vtkActor* handleToHighlight = nullptr;
+    
+    // 根据手柄类型和轴向找到对应的Actor
+    switch (handleType) {
+    case GizmoHandleType::TranslateX:
+    case GizmoHandleType::TranslateY:
+    case GizmoHandleType::TranslateZ:
+        if (axisIndex >= 0 && axisIndex < m_translateHandles.size()) {
+            handleToHighlight = m_translateHandles[axisIndex];
+        }
+        break;
+    case GizmoHandleType::RotateX:
+    case GizmoHandleType::RotateY:
+    case GizmoHandleType::RotateZ:
+        if (axisIndex >= 0 && axisIndex < m_rotateHandles.size()) {
+            handleToHighlight = m_rotateHandles[axisIndex];
+        }
+        break;
+    case GizmoHandleType::ScaleX:
+    case GizmoHandleType::ScaleY:
+    case GizmoHandleType::ScaleZ:
+        if (axisIndex >= 0 && axisIndex < m_scaleHandles.size()) {
+            handleToHighlight = m_scaleHandles[axisIndex];
+        }
+        break;
+    case GizmoHandleType::UniformScale:
+        handleToHighlight = m_uniformScaleHandle;
+        break;
+    default:
+        break;
+    }
+    
+    if (handleToHighlight) {
+        // 设置高亮属性
+        auto property = handleToHighlight->GetProperty();
+        property->SetColor(1.0, 1.0, 0.0); // 黄色高亮
+        property->SetOpacity(1.0);        // 完全不透明
+        property->SetAmbient(0.6);       // 增加环境光
+        property->SetDiffuse(0.8);        // 增加漫反射
+        
+        m_isHandleHighlighted = true;
+        m_highlightedHandle = handleType;
+        m_highlightedAxis = axisIndex;
+        
+        // 如果渲染器存在，触发重绘
+        if (m_renderer) {
+            m_renderer->GetRenderWindow()->Render();
+        }
+    }
+}
+
+void TransformGizmo::clearHighlight()
+{
+    if (!m_isHandleHighlighted) return;
+    
+    // 恢复所有手柄的原始颜色
+    for (auto actor : m_translateHandles) {
+        double color[3] = {1.0, 0.0, 0.0};
+        if (m_translateHandles.indexOf(actor) == 1) color[1] = 1.0; // Y轴绿色
+        if (m_translateHandles.indexOf(actor) == 2) color[2] = 1.0; // Z轴蓝色
+        setupHandleProperties(actor, color);
+    }
+    
+    for (auto actor : m_rotateHandles) {
+        double color[3] = {1.0, 0.0, 0.0};
+        if (m_rotateHandles.indexOf(actor) == 1) color[1] = 1.0;
+        if (m_rotateHandles.indexOf(actor) == 2) color[2] = 1.0;
+        setupHandleProperties(actor, color);
+    }
+    
+    for (auto actor : m_scaleHandles) {
+        double color[3] = {1.0, 0.0, 0.0};
+        if (m_scaleHandles.indexOf(actor) == 1) color[1] = 1.0;
+        if (m_scaleHandles.indexOf(actor) == 2) color[2] = 1.0;
+        setupHandleProperties(actor, color);
+    }
+    
+    if (m_uniformScaleHandle) {
+        double yellow[3] = {1.0, 1.0, 0.0};
+        setupHandleProperties(m_uniformScaleHandle, yellow);
+    }
+    
+    m_isHandleHighlighted = false;
+    m_highlightedHandle = GizmoHandleType::None;
+    m_highlightedAxis = -1;
+    
+    // 如果渲染器存在，触发重绘
+    if (m_renderer) {
+        m_renderer->GetRenderWindow()->Render();
+    }
+}
+
+void TransformGizmo::startTransformPreview()
+{
+    if (!m_target || m_isTransforming) return;
+    
+    m_isTransforming = true;
+    
+    // 保存原始变换
+    m_originalTransform = vtkSmartPointer<vtkTransform>::New();
+    if (auto userTransform = m_target->GetUserTransform()) {
+        m_originalTransform->DeepCopy(userTransform);
+    }
+    
+    // 创建预览Actor（半透明副本）
+    if (m_target) {
+        m_previewActor = vtkActor::New();
+        if (auto mapper = m_target->GetMapper()) {
+            m_previewActor->SetMapper(mapper);
+        }
+        
+        // 设置预览属性
+        auto property = m_previewActor->GetProperty();
+        property->SetColor(0.5, 0.5, 1.0); // 蓝色半透明
+        property->SetOpacity(0.5);
+        property->SetAmbient(0.3);
+        property->SetDiffuse(0.7);
+        
+        // 添加到渲染器
+        if (m_renderer) {
+            m_renderer->AddActor(m_previewActor);
+        }
+    }
+    
+    // 重置预览变换数据
+    m_previewTransform[0] = m_previewTransform[1] = m_previewTransform[2] = 0.0;
+}
+
+void TransformGizmo::updateTransformPreview(double dx, double dy, int axisIndex, GizmoHandleType handleType)
+{
+    if (!m_isTransforming || !m_target || !m_previewActor) return;
+    
+    // 根据手柄类型和轴向计算变换
+    double sensitivity = 0.01; // 变换灵敏度
+    
+    switch (handleType) {
+    case GizmoHandleType::TranslateX:
+        m_previewTransform[0] = dx * sensitivity;
+        break;
+    case GizmoHandleType::TranslateY:
+        m_previewTransform[1] = -dy * sensitivity;
+        break;
+    case GizmoHandleType::TranslateZ:
+        m_previewTransform[2] = dy * sensitivity;
+        break;
+    case GizmoHandleType::RotateX:
+    case GizmoHandleType::RotateY:
+    case GizmoHandleType::RotateZ:
+        m_previewTransform[0] = dx * 0.5; // 旋转角度
+        break;
+    case GizmoHandleType::ScaleX:
+    case GizmoHandleType::ScaleY:
+    case GizmoHandleType::ScaleZ:
+        m_previewTransform[0] = 1.0 + dy * 0.01; // 缩放因子
+        break;
+    case GizmoHandleType::UniformScale:
+        m_previewTransform[0] = 1.0 + dy * 0.01;
+        m_previewTransform[1] = m_previewTransform[0];
+        m_previewTransform[2] = m_previewTransform[0];
+        break;
+    default:
+        break;
+    }
+    
+    // 应用预览变换到预览Actor
+    if (m_previewActor) {
+        auto transform = vtkSmartPointer<vtkTransform>::New();
+        if (m_originalTransform) {
+            transform->DeepCopy(m_originalTransform);
+        }
+        
+        // 根据手柄类型应用变换
+        if (handleType >= GizmoHandleType::TranslateX && handleType <= GizmoHandleType::TranslateZ) {
+            transform->Translate(m_previewTransform);
+        }
+        else if (handleType >= GizmoHandleType::RotateX && handleType <= GizmoHandleType::RotateZ) {
+            transform->RotateX(m_previewTransform[0] * (axisIndex == 0 ? 1.0 : 0.0));
+            transform->RotateY(m_previewTransform[0] * (axisIndex == 1 ? 1.0 : 0.0));
+            transform->RotateZ(m_previewTransform[0] * (axisIndex == 2 ? 1.0 : 0.0));
+        }
+        else if (handleType >= GizmoHandleType::ScaleX && handleType <= GizmoHandleType::UniformScale) {
+            if (handleType == GizmoHandleType::UniformScale) {
+                transform->Scale(m_previewTransform[0], m_previewTransform[1], m_previewTransform[2]);
+            } else {
+                double scaleFactors[3] = {1.0, 1.0, 1.0};
+                scaleFactors[axisIndex] = m_previewTransform[0];
+                transform->Scale(scaleFactors);
+            }
+        }
+        
+        m_previewActor->SetUserTransform(transform);
+    }
+    
+    // 更新渲染
+    if (m_renderer) {
+        m_renderer->GetRenderWindow()->Render();
+    }
+}
+
+void TransformGizmo::endTransformPreview()
+{
+    if (!m_isTransforming) return;
+    
+    m_isTransforming = false;
+    
+    // 移除预览Actor
+    if (m_previewActor && m_renderer) {
+        m_renderer->RemoveActor(m_previewActor);
+        m_previewActor->Delete();
+        m_previewActor = nullptr;
+    }
+    
+    // 清理状态
+    m_originalTransform = nullptr;
+    m_previewTransform[0] = m_previewTransform[1] = m_previewTransform[2] = 0.0;
+    
+    // 更新渲染
+    if (m_renderer) {
+        m_renderer->GetRenderWindow()->Render();
+    }
+}
+
 // 新增函数实现
 bool TransformGizmo::PickHandle(int x, int y, int& handleType, int& axisIndex)
 {
@@ -472,4 +715,182 @@ void TransformGizmo::Show()
 void TransformGizmo::Hide()
 {
     hide();
+}
+
+// 精确的射线拾取检测
+bool TransformGizmo::rayPickHandle(int x, int y, GizmoHandleType& handleType, int& axisIndex)
+{
+  if (!m_visible || !m_renderer) {
+    handleType = GizmoHandleType::None;
+    axisIndex = -1;
+    return false;
+  }
+
+  // 配置拾取器
+  m_picker->PickFromListOn();
+  
+  // 根据当前模式添加相应的手柄到拾取列表
+  m_picker->InitializePickList();
+  
+  switch (m_currentMode) {
+  case 1: // 平移模式
+    for (auto actor : m_translateHandles) {
+      m_picker->AddPickList(actor);
+    }
+    break;
+  case 2: // 旋转模式
+    for (auto actor : m_rotateHandles) {
+      m_picker->AddPickList(actor);
+    }
+    break;
+  case 3: // 缩放模式
+    for (auto actor : m_scaleHandles) {
+      m_picker->AddPickList(actor);
+    }
+    if (m_uniformScaleHandle) {
+      m_picker->AddPickList(m_uniformScaleHandle);
+    }
+    break;
+  default:
+    handleType = GizmoHandleType::None;
+    axisIndex = -1;
+    return false;
+  }
+
+  // 执行拾取，设置适当的容差
+  // 注意：vtkPropPicker 没有 SetTolerance 方法，使用默认容差即可
+  
+  // 尝试多次拾取以获得最佳结果
+  vtkActor* bestActor = nullptr;
+  double bestDistance = std::numeric_limits<double>::max();
+  
+  // 多次拾取提高精度
+  for (int attempt = 0; attempt < 3; ++attempt) {
+    if (m_picker->Pick(x, y, 0, m_renderer)) {
+      vtkActor* pickedActor = m_picker->GetActor();
+      if (pickedActor) {
+        double pickPos[3];
+        m_picker->GetPickPosition(pickPos);
+        
+        // 计算拾取点到相机距离
+        double cameraPos[3];
+        m_renderer->GetActiveCamera()->GetPosition(cameraPos);
+        double distance = vtkMath::Distance2BetweenPoints(pickPos, cameraPos);
+        
+        // 选择距离最近的手柄（通常在前面）
+        if (distance < bestDistance) {
+          bestActor = pickedActor;
+          bestDistance = distance;
+        }
+      }
+    }
+  }
+  
+  if (bestActor) {
+    // 确定拾取的手柄类型和轴向
+    if (m_currentMode == 1) { // 平移模式
+      if (m_translateHandles.contains(bestActor)) {
+        int index = m_translateHandles.indexOf(bestActor);
+        axisIndex = index;
+        switch (index) {
+        case 0: handleType = GizmoHandleType::TranslateX; break;
+        case 1: handleType = GizmoHandleType::TranslateY; break;
+        case 2: handleType = GizmoHandleType::TranslateZ; break;
+        default: handleType = GizmoHandleType::None; break;
+        }
+        return true;
+      }
+    }
+    else if (m_currentMode == 2) { // 旋转模式
+      if (m_rotateHandles.contains(bestActor)) {
+        int index = m_rotateHandles.indexOf(bestActor);
+        axisIndex = index;
+        switch (index) {
+        case 0: handleType = GizmoHandleType::RotateX; break;
+        case 1: handleType = GizmoHandleType::RotateY; break;
+        case 2: handleType = GizmoHandleType::RotateZ; break;
+        default: handleType = GizmoHandleType::None; break;
+        }
+        return true;
+      }
+    }
+    else if (m_currentMode == 3) { // 缩放模式
+      if (m_scaleHandles.contains(bestActor)) {
+        int index = m_scaleHandles.indexOf(bestActor);
+        axisIndex = index;
+        switch (index) {
+        case 0: handleType = GizmoHandleType::ScaleX; break;
+        case 1: handleType = GizmoHandleType::ScaleY; break;
+        case 2: handleType = GizmoHandleType::ScaleZ; break;
+        default: handleType = GizmoHandleType::None; break;
+        }
+        return true;
+      }
+      else if (bestActor == m_uniformScaleHandle) {
+        handleType = GizmoHandleType::UniformScale;
+        axisIndex = 3; // 均匀缩放的特殊标识
+        return true;
+      }
+    }
+  }
+
+  // 如果多重拾取失败，尝试传统拾取
+  if (m_picker->Pick(x, y, 0, m_renderer)) {
+    vtkActor* pickedActor = m_picker->GetActor();
+    if (!pickedActor) {
+      handleType = GizmoHandleType::None;
+      axisIndex = -1;
+      return false;
+    }
+
+    // 确定拾取的手柄类型和轴向
+    if (m_currentMode == 1) { // 平移模式
+      if (m_translateHandles.contains(pickedActor)) {
+        int index = m_translateHandles.indexOf(pickedActor);
+        axisIndex = index;
+        switch (index) {
+        case 0: handleType = GizmoHandleType::TranslateX; break;
+        case 1: handleType = GizmoHandleType::TranslateY; break;
+        case 2: handleType = GizmoHandleType::TranslateZ; break;
+        default: handleType = GizmoHandleType::None; break;
+        }
+        return true;
+      }
+    }
+    else if (m_currentMode == 2) { // 旋转模式
+      if (m_rotateHandles.contains(pickedActor)) {
+        int index = m_rotateHandles.indexOf(pickedActor);
+        axisIndex = index;
+        switch (index) {
+        case 0: handleType = GizmoHandleType::RotateX; break;
+        case 1: handleType = GizmoHandleType::RotateY; break;
+        case 2: handleType = GizmoHandleType::RotateZ; break;
+        default: handleType = GizmoHandleType::None; break;
+        }
+        return true;
+      }
+    }
+    else if (m_currentMode == 3) { // 缩放模式
+      if (m_scaleHandles.contains(pickedActor)) {
+        int index = m_scaleHandles.indexOf(pickedActor);
+        axisIndex = index;
+        switch (index) {
+        case 0: handleType = GizmoHandleType::ScaleX; break;
+        case 1: handleType = GizmoHandleType::ScaleY; break;
+        case 2: handleType = GizmoHandleType::ScaleZ; break;
+        default: handleType = GizmoHandleType::None; break;
+        }
+        return true;
+      }
+      else if (pickedActor == m_uniformScaleHandle) {
+        handleType = GizmoHandleType::UniformScale;
+        axisIndex = 3; // 均匀缩放的特殊标识
+        return true;
+      }
+    }
+  }
+
+  handleType = GizmoHandleType::None;
+  axisIndex = -1;
+  return false;
 }
