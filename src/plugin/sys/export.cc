@@ -1,0 +1,5 @@
+#include "sys.h"
+
+DECLARE_PLUGIN(v1.0)
+REG_SERVICED_OBJECT(Sys)
+DECLARE_PLUGIN_END()

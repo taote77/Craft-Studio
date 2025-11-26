@@ -4,10 +4,8 @@
 #include <QApplication>
 #include <QDebug>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QTemporaryFile>
-#include <qapplication.h>
-#include <qdebug.h>
-#include <qfileinfo.h>
 
 #include <vtkActor.h>
 #include <vtkAlgorithm.h>
@@ -302,7 +300,8 @@ void ActionFactory::openGeneralModelFile()
 
 void ActionFactory::onConstructionFile()
 {
-  const QString& dir = QFileDialog::getExistingDirectory(nullptr, "",QApplication::applicationDirPath());
+  const QString& dir =
+    QFileDialog::getExistingDirectory(nullptr, "", QApplication::applicationDirPath());
   if (dir.isEmpty())
   {
     return;
@@ -316,10 +315,10 @@ void ActionFactory::onConstructionFile()
   double pixel_y = 1080.0;
   double pixelSizeX = build_platform_width / pixel_x;  // 192mm / 1920像素 = 0.1mm/像素
   double pixelSizeY = build_platform_height / pixel_y; // 108mm / 1080像素 = 0.1mm/像素
-    // 50    / 500  =
-  double sliceThickness = 0.5;       // 每层厚度0.5mm
+                                                       // 50    / 500  =
+  double sliceThickness = 0.5;                         // 每层厚度0.5mm
 
-  const int numSlices = 5;          // 切片总数
+  const int numSlices = 5; // 切片总数
 
   // ========== 1. 读取并拼接切片 ==========
   vtkSmartPointer<vtkImageAppend> appendFilter = vtkSmartPointer<vtkImageAppend>::New();
@@ -344,7 +343,7 @@ void ActionFactory::onConstructionFile()
 
   // ========== 2. 设置三维体数据结构 ==========
   vtkSmartPointer<vtkImageData> volumeData = appendFilter->GetOutput();
-  double spacing[3] = {pixelSizeX, pixelSizeY, sliceThickness};
+  double spacing[3] = { pixelSizeX, pixelSizeY, sliceThickness };
   volumeData->SetSpacing(spacing);
 
   // ========== 3. 三维重建（等值面提取） ==========

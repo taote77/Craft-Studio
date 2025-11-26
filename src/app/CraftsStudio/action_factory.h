@@ -3,9 +3,9 @@
 
 #include <QObject>
 
-#include <vtkGenericOpenGLRenderWindow.h>
-#include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
+
+class vtkGenericOpenGLRenderWindow;
 
 class ActionFactory : public QObject
 {
@@ -43,8 +43,6 @@ public slots:
   void onConstructionFile();
 
   void clearScene();
-
-
 
   /// method
 

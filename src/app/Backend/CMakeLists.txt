@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(CraftsStudio LANGUAGES CXX)
+project(CraftsStudioBackend LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -19,41 +19,6 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Gui Quick LinguistToo
 
 add_executable(${PROJECT_NAME}
   main.cc
-  engine/rs_interactor_trackball_camera.h
-  engine/rs_interactor_trackball_camera.cc
-  engine/rs_interactor_v2.h
-  engine/rs_interactor_v2.cc
-  engine/rs_scene_object.h
-  engine/rs_scene_object.cc
-  engine/rs_scene_object_v2.h
-  engine/rs_scene_object_v2.cc
-  engine/rs_scene_manager.h
-  engine/rs_scene_manager.cc
-  engine/rs_scene_manager_v2.h
-  engine/rs_scene_manager_v2.cc
-  engine/rs_transform_gizmo.h
-  engine/rs_transform_gizmo.cc
-  engine/build_platform.h
-  engine/build_platform.cc
-  engine/file_importer.h
-  engine/file_importer.cc
-  ui/mainwindow.h
-  ui/mainwindow.cc
-  ui/menu_manager.h
-  ui/menu_manager.cc
-  ui/project_tree.h
-  ui/project_tree.cc
-  ui/model_manager.h
-  ui/model_manager.cc
-  ui/tree_model.h
-  ui/tree_model.cc
-  ui/transform_panel.h
-  ui/transform_panel.cc
-  ui/plater_widget.h
-  ui/plater_widget.cc
-  action_factory.h
-  action_factory.cc
-  app.qrc
 )
 
 # target_compile_definitions(${PROJECT_NAME}  PRIVATE 
@@ -95,8 +60,6 @@ endif()
 
 
 
-
-
 if(POLICY CMP0020)
   cmake_policy(SET CMP0020 NEW)
   cmake_policy(SET CMP0071 NEW)
@@ -106,10 +69,17 @@ message(STATUS "VTK_VERSION: ${VTK_VERSION}")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   ${VTK_LIBRARIES}  
+  pdk
 )
 
 # vtk_module_autoinit is needed
 vtk_module_autoinit(
   TARGETS ${PROJECT_NAME}
   MODULES ${VTK_LIBRARIES}
+)
+
+
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+  ${CMAKE_SOURCE_DIR}/src/sdk
 )
