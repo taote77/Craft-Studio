@@ -18,11 +18,12 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QVTKOpenGLNativeWidget.h>
-#include <QWidget>
 
 #include <vtkCamera.h>
+#include <vtkCameraOrientationWidget.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkOrientationMarkerWidget.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
@@ -50,7 +51,7 @@ public:
   vtkSmartPointer<vtkRenderer> getRenderer() const { return m_renderer; }
 
   // 获取交互器
-  vtkSmartPointer<RSInteractorV2> getInteractor() const { return m_interactor; }
+  vtkSmartPointer<RSInteractorV2> getInteractor() const { return m_interactor_style; }
 
   // 获取场景管理器
   SceneManagerV2* getSceneManager() const { return m_sceneManager; }
@@ -198,7 +199,11 @@ private:
   QWidget* m_vtkWidget; // 临时使用 QWidget，后续可以根据Qt版本和VTK配置修改
   vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
   vtkSmartPointer<vtkRenderer> m_renderer;
-  vtkSmartPointer<RSInteractorV2> m_interactor;
+  vtkSmartPointer<RSInteractorV2> m_interactor_style;
+
+  vtkSmartPointer<vtkOrientationMarkerWidget> _axes_widget{ nullptr };
+
+  vtkSmartPointer<vtkCameraOrientationWidget> _cam_widget{ nullptr };
 
   // 右侧面板
   QWidget* m_rightPanelWidget;

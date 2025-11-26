@@ -30,6 +30,7 @@
 
 #include "engine/file_importer.h"
 
+#include <vtkAxesActor.h>
 #include <vtkCamera.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
@@ -243,19 +244,37 @@ void PlaterWidget::setupViewport()
 
   m_renderWindow->AddRenderer(m_renderer);
 
-  // 创建交互器
-  m_interactor = vtkSmartPointer<RSInteractorV2>::New();
-  m_interactor->RemoveAllObservers();
-  // m_interactor->SetRenderer(m_renderer);
-  m_interactor->SetSceneManager(m_sceneManager);
+  {
+    auto axes = vtkSmartPointer<vtkAxesActor>::New();
+    axes->SetTotalLength(1, 1, 1); // 创建坐标轴标记窗口部件
+    _axes_widget = vtkSmartPointer<vtkOrientationMarkerWidget>::New();
+    _axes_widget->SetOrientationMarker(axes);
 
-  qDebug() << "eeew: " << m_renderWindow->GetInteractor();
+    _cam_widget = vtkSmartPointer<vtkCameraOrientationWidget>::New();
+  }
+
+  // 创建交互器
+
+  auto iterator = m_renderWindow->GetInteractor();
+  iterator->RemoveAllObservers();
+
+  m_interactor_style = vtkSmartPointer<RSInteractorV2>::New();
+  m_interactor_style->SetRenderer(m_renderer);
+  m_interactor_style->SetSceneManager(m_sceneManager);
+
+  _axes_widget->SetInteractor(iterator);
+  _axes_widget->SetEnabled(1);
+  _axes_widget->InteractiveOff();
+
   if (!m_renderWindow->GetInteractor())
   {
     qDebug() << "Interactor is null";
   }
 
-  m_renderWindow->GetInteractor()->SetInteractorStyle(m_interactor);
+  iterator->SetInteractorStyle(m_interactor_style);
+
+  _cam_widget->SetParentRenderer(m_renderer);
+  _cam_widget->On();
 
   // 设置渲染窗口属性
   m_renderWindow->SetAlphaBitPlanes(1);
@@ -1089,9 +1108,9 @@ void PlaterWidget::setViewType(int type)
 {
   ViewType viewType = static_cast<ViewType>(type);
 
-  if (m_interactor)
+  if (m_interactor_style)
   {
-    m_interactor->SetViewType(viewType);
+    m_interactor_style->SetViewType(viewType);
   }
 
   // 更新渲染
@@ -1105,27 +1124,27 @@ void PlaterWidget::setViewType(int type)
 
 void PlaterWidget::resetCamera()
 {
-  if (m_interactor)
+  if (m_interactor_style)
   {
-    m_interactor->ResetCamera();
+    m_interactor_style->ResetCamera();
   }
   emit cameraReset();
 }
 
 void PlaterWidget::fitAll()
 {
-  if (m_interactor)
+  if (m_interactor_style)
   {
-    m_interactor->FitAll();
+    m_interactor_style->FitAll();
   }
   emit cameraFitAll();
 }
 
 void PlaterWidget::fitSelected()
 {
-  if (m_interactor)
+  if (m_interactor_style)
   {
-    m_interactor->FitSelected();
+    m_interactor_style->FitSelected();
   }
   emit cameraFitSelected();
 }
