@@ -2,33 +2,33 @@
 #define MAINWINOW_H
 
 #include "../action_factory.h"
-#include "project_tree.h"
 #include "plater_widget.h"
+#include "project_tree.h"
 
-#include <QDockWidget>
-#include <QGridLayout>
-#include <QLabel>
 #include <QMainWindow>
-#include <QMenu>
 #include <QPointer>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QTabWidget>
-#include <QSplitter>
-#include <QStatusBar>
-#include <QContextMenuEvent>
+
+class QContextMenuEvent;
+class QDockWidget;
+class QLabel;
+class QMenu;
+class QPushButton;
+class QTabWidget;
+class QVBoxLayout;
+
+class QVTKOpenGLNativeWidget;
+class vtkGenericOpenGLRenderWindow;
+class vtkRenderer;
+class QVTKOpenGLNativeWidget;
+class QVTKOpenGLNativeWidget;
 
 #include <QVTKOpenGLNativeWidget.h>
-#include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
-#include <vtkMatrix4x4.h>
-#include <vtkPropPicker.h>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
-#include <vtkSphereSource.h>
 
-#include <cmath>
-#include <cstdlib>
+#include "menu_manager.h"
+
 #include <random>
 
 class MainWindow : public QMainWindow
@@ -74,7 +74,7 @@ private:
   QDockWidget* _left_dock;
   QTabWidget* _centralTabWidget;
   PlaterWidget* _platerWidget;
-  
+
   // 状态栏组件
   QLabel* _statusLabel;
   QLabel* _modelCountLabel;
@@ -89,9 +89,11 @@ private:
 
   std::mt19937 _rand_eng{ 0 };
 
+  MenuManager* _menu_mgr{ nullptr };
+
   // 定义菜单
   QMenu* _right_button_menu{ nullptr }; // 右键菜单
-  
+
   // 菜单项
   QAction* _newAction;
   QAction* _openAction;
@@ -99,14 +101,14 @@ private:
   QAction* _saveAsAction;
   QAction* _exportAction;
   QAction* _exitAction;
-  
+
   QAction* _undoAction;
   QAction* _redoAction;
   QAction* _addAction;
   QAction* _removeAction;
   QAction* _duplicateAction;
   QAction* _selectAllAction;
-  
+
   // 视图控制动作
   QAction* _resetViewAction;
   QAction* _fitViewAction;
@@ -116,7 +118,7 @@ private:
   QAction* _leftViewAction;
   QAction* _rightViewAction;
   QAction* _perspectiveViewAction;
-  
+
   // 工具动作
   QAction* _generateSupportAction;
   QAction* _removeSupportAction;
@@ -124,7 +126,7 @@ private:
   QAction* _sliceAction;
   QAction* _previewAction;
   QAction* _exportGCodeAction;
-  
+
   QAction* _aboutAction;
   QAction* _helpAction;
 

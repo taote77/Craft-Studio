@@ -1,7 +1,5 @@
 #include "plater_widget.h"
 
-#include <QAction>
-#include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
@@ -19,12 +17,9 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QProgressBar>
-#include <QSlider>
-#include <QSpinBox>
 #include <QSplitter>
 #include <QTabWidget>
 #include <QTableWidget>
-#include <QTime>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -32,7 +27,9 @@
 
 #include <vtkAxesActor.h>
 #include <vtkCamera.h>
+#include <vtkCameraOrientationWidget.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkOrientationMarkerWidget.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 
@@ -950,8 +947,8 @@ void PlaterWidget::updateModelInfo()
 
   m_materialUsageLabel->setText(QString("材料用量: %1g").arg(totalWeight, 0, 'f', 2));
   m_printTimeLabel->setText(QString("预估时间: %1h %2m")
-      .arg(static_cast<int>(totalTime) / 3600)
-      .arg((static_cast<int>(totalTime) % 3600) / 60));
+                              .arg(static_cast<int>(totalTime) / 3600)
+                              .arg((static_cast<int>(totalTime) % 3600) / 60));
 }
 
 // 实现公共槽函数

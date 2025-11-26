@@ -1,31 +1,27 @@
 #ifndef PLATER_WIDGET_H
 #define PLATER_WIDGET_H
 
-#include <QCheckBox>
-#include <QComboBox>
-#include <QDoubleSpinBox>
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QHBoxLayout>
-#include <QHeaderView>
-#include <QLabel>
-#include <QProgressBar>
-#include <QSlider>
-#include <QSpinBox>
-#include <QSplitter>
-#include <QTabWidget>
-#include <QTableWidget>
-#include <QToolButton>
-#include <QVBoxLayout>
-#include <QVTKOpenGLNativeWidget.h>
+class QDoubleSpinBox;
+class QGroupBox;
+class QComboBox;
+class QSlider;
+class QTabWidget;
+class QLabel;
+class QToolButton;
+class QCheckBox;
+class QHBoxLayout;
+class QProgressBar;
+class QProgressBar;
+class QTableWidget;
+class QSplitter;
+class QVBoxLayout;
 
-#include <vtkCamera.h>
-#include <vtkCameraOrientationWidget.h>
-#include <vtkGenericOpenGLRenderWindow.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#include <vtkOrientationMarkerWidget.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkRenderer.h>
+class vtkCameraOrientationWidget;
+class vtkGenericOpenGLRenderWindow;
+class vtkRenderer;
+class vtkOrientationMarkerWidget;
+
+#include <QVTKOpenGLNativeWidget.h>
 #include <vtkSmartPointer.h>
 
 #include "engine/build_platform.h"
@@ -201,9 +197,9 @@ private:
   vtkSmartPointer<vtkRenderer> m_renderer;
   vtkSmartPointer<RSInteractorV2> m_interactor_style;
 
-  vtkSmartPointer<vtkOrientationMarkerWidget> _axes_widget{ nullptr };
+  vtkSmartPointer<vtkOrientationMarkerWidget> _axes_widget;
 
-  vtkSmartPointer<vtkCameraOrientationWidget> _cam_widget{ nullptr };
+  vtkSmartPointer<vtkCameraOrientationWidget> _cam_widget;
 
   // 右侧面板
   QWidget* m_rightPanelWidget;

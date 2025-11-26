@@ -22,7 +22,7 @@ RSInteractorV2::RSInteractorV2()
   // 初始化拾取器
   m_picker = vtkSmartPointer<vtkPropPicker>::New();
   m_picker->PickFromListOn();
-  
+
   // 初始化相机状态
   for (int i = 0; i < 3; ++i)
   {
@@ -30,9 +30,9 @@ RSInteractorV2::RSInteractorV2()
     m_startFocalPoint[i] = 0.0;
     m_startViewUp[i] = 0.0;
   }
-  
+
   m_startViewUp[1] = 1.0; // 默认Y轴向上
-  
+
   m_startParallelScale = 1.0;
   m_startDistance = 1.0;
 }
@@ -64,7 +64,8 @@ void RSInteractorV2::SetSceneManager(SceneManagerV2* manager)
 void RSInteractorV2::SetTransformGizmo(TransformGizmo* gizmo)
 {
   m_transformGizmo = gizmo;
-  if (m_transformGizmo && m_renderer) {
+  if (m_transformGizmo && m_renderer)
+  {
     m_transformGizmo->setRenderer(m_renderer);
   }
 }
@@ -73,7 +74,7 @@ vtkProp3D* RSInteractorV2::PickActor(int x, int y)
 {
   if (!m_renderer || !m_picker)
     return nullptr;
-    
+
   m_picker->Pick(x, y, 0, m_renderer);
   return m_picker->GetActor();
 }
@@ -82,7 +83,7 @@ bool RSInteractorV2::PickWorldPosition(int x, int y, double worldPos[3])
 {
   if (!m_renderer || !m_picker)
     return false;
-    
+
   // 使用拾取器获取世界坐标
   m_picker->Pick(x, y, 0, m_renderer);
   if (m_picker->GetActor())
@@ -90,18 +91,18 @@ bool RSInteractorV2::PickWorldPosition(int x, int y, double worldPos[3])
     m_picker->GetPickPosition(worldPos);
     return true;
   }
-  
+
   // 如果没有拾取到对象，则投影到平面上
-  double displayPos[3] = {static_cast<double>(x), static_cast<double>(y), 0.0};
+  double displayPos[3] = { static_cast<double>(x), static_cast<double>(y), 0.0 };
   vtkSmartPointer<vtkCoordinate> coordinate = vtkSmartPointer<vtkCoordinate>::New();
   coordinate->SetCoordinateSystemToDisplay();
   coordinate->SetValue(displayPos);
-  
+
   double* worldCoords = coordinate->GetComputedWorldValue(m_renderer);
   worldPos[0] = worldCoords[0];
   worldPos[1] = worldCoords[1];
   worldPos[2] = worldCoords[2];
-  
+
   return true;
 }
 
@@ -109,9 +110,9 @@ void RSInteractorV2::SetViewType(ViewType type)
 {
   if (m_viewType == type || !m_camera || !m_renderer)
     return;
-    
+
   m_viewType = type;
-  
+
   // 获取所有对象的边界
   double bounds[6];
   if (m_sceneManager)
@@ -124,20 +125,14 @@ void RSInteractorV2::SetViewType(ViewType type)
     bounds[0] = bounds[2] = bounds[4] = -50.0;
     bounds[1] = bounds[3] = bounds[5] = 50.0;
   }
-  
-  double center[3] = {
-    (bounds[0] + bounds[1]) / 2.0,
-    (bounds[2] + bounds[3]) / 2.0,
-    (bounds[4] + bounds[5]) / 2.0
-  };
-  
+
+  double center[3] = { (bounds[0] + bounds[1]) / 2.0, (bounds[2] + bounds[3]) / 2.0,
+    (bounds[4] + bounds[5]) / 2.0 };
+
   // 计算合适的距离
-  double size = qMax(
-    qMax(bounds[1] - bounds[0], bounds[3] - bounds[2]),
-    bounds[5] - bounds[4]
-  );
+  double size = qMax(qMax(bounds[1] - bounds[0], bounds[3] - bounds[2]), bounds[5] - bounds[4]);
   double distance = size * 2.5;
-  
+
   // 根据视图类型设置相机参数
   switch (type)
   {
@@ -146,53 +141,53 @@ void RSInteractorV2::SetViewType(ViewType type)
       m_camera->SetPosition(center[0], center[1], center[2] + distance);
       m_camera->SetViewUp(0, 1, 0);
       break;
-      
+
     case ViewType::Orthographic:
       SwitchToOrthographicView();
       m_camera->SetPosition(center[0], center[1], center[2] + distance);
       m_camera->SetViewUp(0, 1, 0);
       break;
-      
+
     case ViewType::Top:
       SwitchToOrthographicView();
       m_camera->SetPosition(center[0], center[1], center[2] + distance);
       m_camera->SetViewUp(0, 1, 0);
       break;
-      
+
     case ViewType::Bottom:
       SwitchToOrthographicView();
       m_camera->SetPosition(center[0], center[1], center[2] - distance);
       m_camera->SetViewUp(0, -1, 0);
       break;
-      
+
     case ViewType::Front:
       SwitchToOrthographicView();
       m_camera->SetPosition(center[0], center[1] - distance, center[2]);
       m_camera->SetViewUp(0, 0, 1);
       break;
-      
+
     case ViewType::Back:
       SwitchToOrthographicView();
       m_camera->SetPosition(center[0], center[1] + distance, center[2]);
       m_camera->SetViewUp(0, 0, 1);
       break;
-      
+
     case ViewType::Left:
       SwitchToOrthographicView();
       m_camera->SetPosition(center[0] - distance, center[1], center[2]);
       m_camera->SetViewUp(0, 0, 1);
       break;
-      
+
     case ViewType::Right:
       SwitchToOrthographicView();
       m_camera->SetPosition(center[0] + distance, center[1], center[2]);
       m_camera->SetViewUp(0, 0, 1);
       break;
   }
-  
+
   m_camera->SetFocalPoint(center);
   m_renderer->ResetCameraClippingRange();
-  
+
   if (this->Interactor)
     this->Interactor->Render();
 }
@@ -203,7 +198,7 @@ void RSInteractorV2::ResetCamera()
   {
     m_renderer->ResetCamera();
     m_renderer->ResetCameraClippingRange();
-    
+
     if (this->Interactor)
       this->Interactor->Render();
   }
@@ -213,7 +208,7 @@ void RSInteractorV2::FitAll()
 {
   if (!m_renderer || !m_camera)
     return;
-    
+
   // 获取所有对象的边界
   double bounds[6];
   if (m_sceneManager)
@@ -226,25 +221,19 @@ void RSInteractorV2::FitAll()
     bounds[0] = bounds[2] = bounds[4] = -50.0;
     bounds[1] = bounds[3] = bounds[5] = 50.0;
   }
-  
-  double center[3] = {
-    (bounds[0] + bounds[1]) / 2.0,
-    (bounds[2] + bounds[3]) / 2.0,
-    (bounds[4] + bounds[5]) / 2.0
-  };
-  
+
+  double center[3] = { (bounds[0] + bounds[1]) / 2.0, (bounds[2] + bounds[3]) / 2.0,
+    (bounds[4] + bounds[5]) / 2.0 };
+
   // 计算合适的距离
-  double size = qMax(
-    qMax(bounds[1] - bounds[0], bounds[3] - bounds[2]),
-    bounds[5] - bounds[4]
-  );
+  double size = qMax(qMax(bounds[1] - bounds[0], bounds[3] - bounds[2]), bounds[5] - bounds[4]);
   double distance = size * 2.5;
-  
+
   // 设置相机
   m_camera->SetFocalPoint(center);
   m_camera->SetPosition(center[0], center[1], center[2] + distance);
   m_renderer->ResetCameraClippingRange();
-  
+
   if (this->Interactor)
     this->Interactor->Render();
 }
@@ -253,7 +242,7 @@ void RSInteractorV2::FitSelected()
 {
   if (!m_renderer || !m_camera)
     return;
-    
+
   // 获取选中对象的边界
   double bounds[6];
   if (m_sceneManager && !m_sceneManager->selectedObjects().isEmpty())
@@ -266,25 +255,19 @@ void RSInteractorV2::FitSelected()
     FitAll();
     return;
   }
-  
-  double center[3] = {
-    (bounds[0] + bounds[1]) / 2.0,
-    (bounds[2] + bounds[3]) / 2.0,
-    (bounds[4] + bounds[5]) / 2.0
-  };
-  
+
+  double center[3] = { (bounds[0] + bounds[1]) / 2.0, (bounds[2] + bounds[3]) / 2.0,
+    (bounds[4] + bounds[5]) / 2.0 };
+
   // 计算合适的距离
-  double size = qMax(
-    qMax(bounds[1] - bounds[0], bounds[3] - bounds[2]),
-    bounds[5] - bounds[4]
-  );
+  double size = qMax(qMax(bounds[1] - bounds[0], bounds[3] - bounds[2]), bounds[5] - bounds[4]);
   double distance = size * 2.5;
-  
+
   // 设置相机
   m_camera->SetFocalPoint(center);
   m_camera->SetPosition(center[0], center[1], center[2] + distance);
   m_renderer->ResetCameraClippingRange();
-  
+
   if (this->Interactor)
     this->Interactor->Render();
 }
@@ -298,7 +281,7 @@ void RSInteractorV2::SetInteractionMode(InteractionMode mode)
 {
   if (m_interactionMode == mode)
     return;
-    
+
   m_interactionMode = mode;
   UpdateCursor();
   UpdateStatusBar();
@@ -330,35 +313,36 @@ void RSInteractorV2::SetCameraPosition(double position[3])
   SetCameraPosition(position[0], position[1], position[2]);
 }
 
-void RSInteractorV2::ProjectToPlane(double screenPos[2], double planeNormal[3], double planePoint[3], double worldPos[3])
+void RSInteractorV2::ProjectToPlane(
+  double screenPos[2], double planeNormal[3], double planePoint[3], double worldPos[3])
 {
   // 将屏幕坐标转换为世界坐标
-  double displayPos[3] = {screenPos[0], screenPos[1], 0.0};
+  double displayPos[3] = { screenPos[0], screenPos[1], 0.0 };
   vtkSmartPointer<vtkCoordinate> coordinate = vtkSmartPointer<vtkCoordinate>::New();
   coordinate->SetCoordinateSystemToDisplay();
   coordinate->SetValue(displayPos);
-  
+
   double* rayStart = coordinate->GetComputedWorldValue(m_renderer);
-  
+
   // 获取相机方向作为射线方向
   double cameraPos[3];
   m_camera->GetPosition(cameraPos);
-  
+
   double rayDir[3];
   for (int i = 0; i < 3; ++i)
   {
     rayDir[i] = rayStart[i] - cameraPos[i];
   }
-  
+
   vtkMath::Normalize(rayDir);
-  
+
   // 计算射线与平面的交点
   double rayToPlane[3];
   for (int i = 0; i < 3; ++i)
   {
     rayToPlane[i] = planePoint[i] - cameraPos[i];
   }
-  
+
   double dotProduct = vtkMath::Dot(rayDir, planeNormal);
   if (fabs(dotProduct) < 1e-6)
   {
@@ -369,9 +353,9 @@ void RSInteractorV2::ProjectToPlane(double screenPos[2], double planeNormal[3], 
     }
     return;
   }
-  
+
   double t = vtkMath::Dot(rayToPlane, planeNormal) / dotProduct;
-  
+
   for (int i = 0; i < 3; ++i)
   {
     worldPos[i] = cameraPos[i] + t * rayDir[i];
@@ -382,33 +366,33 @@ void RSInteractorV2::OnLeftButtonDown()
 {
   if (!this->Interactor || !m_renderer)
     return;
-    
+
   this->GetInteractor()->GetEventPosition(m_startMousePos);
   m_currentMousePos[0] = m_startMousePos[0];
   m_currentMousePos[1] = m_startMousePos[1];
-  
+
   m_isDragging = true;
-  
+
   // 根据当前交互模式处理
   switch (m_interactionMode)
   {
     case InteractionMode::Camera:
       StartCameraManipulation();
       break;
-      
+
     case InteractionMode::Selection:
       StartSelection();
       break;
-      
+
     case InteractionMode::Transform:
       StartTransform();
       break;
-      
+
     case InteractionMode::Measure:
       StartMeasure();
       break;
   }
-  
+
   // 调用基类方法
   vtkInteractorStyleTrackballCamera::OnLeftButtonDown();
 }
@@ -417,9 +401,9 @@ void RSInteractorV2::OnMouseMove()
 {
   if (!this->Interactor)
     return;
-    
+
   this->GetInteractor()->GetEventPosition(m_currentMousePos);
-  
+
   if (m_isDragging)
   {
     // 根据当前交互模式处理
@@ -428,25 +412,25 @@ void RSInteractorV2::OnMouseMove()
       case InteractionMode::Camera:
         UpdateCameraManipulation();
         break;
-        
+
       case InteractionMode::Selection:
         UpdateSelection();
         break;
-        
+
       case InteractionMode::Transform:
         UpdateTransform();
         break;
-        
+
       case InteractionMode::Measure:
         UpdateMeasure();
         break;
     }
   }
-  
+
   // 更新最后鼠标位置
   m_lastMousePos[0] = m_currentMousePos[0];
   m_lastMousePos[1] = m_currentMousePos[1];
-  
+
   // 调用基类方法
   vtkInteractorStyleTrackballCamera::OnMouseMove();
 }
@@ -455,29 +439,29 @@ void RSInteractorV2::OnLeftButtonUp()
 {
   if (!this->Interactor)
     return;
-    
+
   m_isDragging = false;
-  
+
   // 根据当前交互模式处理
   switch (m_interactionMode)
   {
     case InteractionMode::Camera:
       EndCameraManipulation();
       break;
-      
+
     case InteractionMode::Selection:
       EndSelection();
       break;
-      
+
     case InteractionMode::Transform:
       EndTransform();
       break;
-      
+
     case InteractionMode::Measure:
       EndMeasure();
       break;
   }
-  
+
   // 调用基类方法
   vtkInteractorStyleTrackballCamera::OnLeftButtonUp();
 }
@@ -489,7 +473,7 @@ void RSInteractorV2::OnRightButtonDown()
   {
     SetInteractionMode(InteractionMode::Camera);
   }
-  
+
   vtkInteractorStyleTrackballCamera::OnRightButtonDown();
 }
 
@@ -525,9 +509,9 @@ void RSInteractorV2::OnKeyPress()
 {
   if (!this->Interactor || !this->Interactor->GetKeySym())
     return;
-    
+
   const char* key = this->Interactor->GetKeySym();
-  
+
   // 处理快捷键
   if (strcmp(key, "Escape") == 0)
   {
@@ -571,7 +555,7 @@ void RSInteractorV2::OnKeyPress()
   {
     SetViewType(ViewType::Perspective);
   }
-  
+
   // 调用基类方法
   vtkInteractorStyleTrackballCamera::OnKeyPress();
 }
@@ -608,26 +592,32 @@ bool RSInteractorV2::PickGizmoHandle(int x, int y, int& handleType, int& axisInd
     if (m_transformGizmo->rayPickHandle(x, y, gizmoType, axisIndex))
     {
       // 将GizmoHandleType转换为整数类型
-      switch (gizmoType) {
-      case GizmoHandleType::TranslateX: 
-      case GizmoHandleType::TranslateY: 
-      case GizmoHandleType::TranslateZ: 
-        handleType = 0; break;
-      case GizmoHandleType::RotateX: 
-      case GizmoHandleType::RotateY: 
-      case GizmoHandleType::RotateZ: 
-        handleType = 1; break;
-      case GizmoHandleType::ScaleX: 
-      case GizmoHandleType::ScaleY: 
-      case GizmoHandleType::ScaleZ: 
-      case GizmoHandleType::UniformScale: 
-        handleType = 2; break;
-      default: handleType = -1; break;
+      switch (gizmoType)
+      {
+        case GizmoHandleType::TranslateX:
+        case GizmoHandleType::TranslateY:
+        case GizmoHandleType::TranslateZ:
+          handleType = 0;
+          break;
+        case GizmoHandleType::RotateX:
+        case GizmoHandleType::RotateY:
+        case GizmoHandleType::RotateZ:
+          handleType = 1;
+          break;
+        case GizmoHandleType::ScaleX:
+        case GizmoHandleType::ScaleY:
+        case GizmoHandleType::ScaleZ:
+        case GizmoHandleType::UniformScale:
+          handleType = 2;
+          break;
+        default:
+          handleType = -1;
+          break;
       }
-      
+
       // 设置全局的GizmoHandleType
       m_gizmoHandleType = static_cast<int>(gizmoType);
-      
+
       return true;
     }
   }
@@ -638,13 +628,13 @@ void RSInteractorV2::StartCameraManipulation()
 {
   if (!m_camera)
     return;
-    
+
   // 保存相机状态
   m_camera->GetPosition(m_startCameraPosition);
   m_camera->GetFocalPoint(m_startFocalPoint);
   m_camera->GetViewUp(m_startViewUp);
   m_startParallelScale = m_camera->GetParallelScale();
-  
+
   double focalPoint[3];
   m_camera->GetFocalPoint(focalPoint);
   m_startDistance = vtkMath::Distance2BetweenPoints(m_startCameraPosition, focalPoint);
@@ -664,10 +654,7 @@ void RSInteractorV2::EndCameraManipulation()
 void RSInteractorV2::StartSelection()
 {
   // 开始框选
-  m_selectionRect = QRectF(
-    m_startMousePos[0], m_startMousePos[1], 
-    0, 0
-  );
+  m_selectionRect = QRectF(m_startMousePos[0], m_startMousePos[1], 0, 0);
 }
 
 void RSInteractorV2::UpdateSelection()
@@ -683,7 +670,7 @@ void RSInteractorV2::EndSelection()
 {
   if (!m_sceneManager)
     return;
-    
+
   // 如果选择框很小，则执行点选
   if (m_selectionRect.width() < 5 && m_selectionRect.height() < 5)
   {
@@ -718,20 +705,19 @@ void RSInteractorV2::StartTransform()
 {
   if (!m_transformGizmo || !m_sceneManager)
     return;
-    
+
   // 检查是否点击了操纵器手柄
   GizmoHandleType handleType;
   int axisIndex;
-  
-  if (PickGizmoHandle(m_startMousePos[0], m_startMousePos[1], 
-                     m_gizmoHandleType, axisIndex))
+
+  if (PickGizmoHandle(m_startMousePos[0], m_startMousePos[1], m_gizmoHandleType, axisIndex))
   {
     m_isGizmoInteracting = true;
     m_gizmoAxisIndex = axisIndex;
-    
+
     // 高亮选中的手柄
     m_transformGizmo->highlightHandle(handleType, axisIndex);
-    
+
     // 开始变换预览
     m_transformGizmo->startTransformPreview();
   }
@@ -755,27 +741,27 @@ void RSInteractorV2::UpdateTransform()
 {
   if (!m_transformGizmo || !m_sceneManager)
     return;
-    
+
   if (m_isGizmoInteracting)
   {
     double dx = m_currentMousePos[0] - m_startMousePos[0];
     double dy = m_currentMousePos[1] - m_startMousePos[1];
-    
+
     // 更新变换预览
-    m_transformGizmo->updateTransformPreview(dx, dy, m_gizmoAxisIndex, 
-                                           static_cast<GizmoHandleType>(m_gizmoHandleType));
-    
+    m_transformGizmo->updateTransformPreview(
+      dx, dy, m_gizmoAxisIndex, static_cast<GizmoHandleType>(m_gizmoHandleType));
+
     // 根据手柄类型执行变换预览
     switch (m_gizmoHandleType)
     {
       case 0: // 平移
         m_transformGizmo->ApplyTranslation(dx, dy, m_gizmoAxisIndex);
         break;
-        
+
       case 1: // 旋转
         m_transformGizmo->ApplyRotation(dx, dy, m_gizmoAxisIndex);
         break;
-        
+
       case 2: // 缩放
         m_transformGizmo->ApplyScale(dx, dy, m_gizmoAxisIndex);
         break;
@@ -789,11 +775,11 @@ void RSInteractorV2::EndTransform()
   {
     // 结束变换预览
     m_transformGizmo->endTransformPreview();
-    
+
     // 清除手柄高亮
     m_transformGizmo->clearHighlight();
   }
-  
+
   m_isGizmoInteracting = false;
   m_gizmoHandleType = -1;
   m_gizmoAxisIndex = -1;
@@ -885,15 +871,15 @@ void RSInteractorV2::UpdateCursor()
     case InteractionMode::Camera:
       // 默认光标
       break;
-      
+
     case InteractionMode::Selection:
       // 选择光标
       break;
-      
+
     case InteractionMode::Transform:
       // 移动光标
       break;
-      
+
     case InteractionMode::Measure:
       // 测量光标
       break;
@@ -908,15 +894,15 @@ void RSInteractorV2::UpdateStatusBar()
     case InteractionMode::Camera:
       m_statusText = "相机模式 - 左键拖动旋转，右键拖动平移，滚轮缩放";
       break;
-      
+
     case InteractionMode::Selection:
       m_statusText = "选择模式 - 左键选择对象，Ctrl+点击多选，框选多个对象";
       break;
-      
+
     case InteractionMode::Transform:
       m_statusText = "变换模式 - 拖动操纵器手柄进行变换";
       break;
-      
+
     case InteractionMode::Measure:
       m_statusText = "测量模式 - 左键点击测量点，ESC结束测量";
       break;
@@ -927,10 +913,10 @@ bool RSInteractorV2::IsModifierKeyPressed(int modifier)
 {
   if (!this->Interactor)
     return false;
-    
+
   return (this->Interactor->GetShiftKey() && modifier == ShiftKey) ||
-         (this->Interactor->GetControlKey() && modifier == ControlKey) ||
-         (this->Interactor->GetAltKey() && modifier == AltKey);
+    (this->Interactor->GetControlKey() && modifier == ControlKey) ||
+    (this->Interactor->GetAltKey() && modifier == AltKey);
 }
 
 bool RSInteractorV2::IsKeyPressed(char key)
@@ -939,7 +925,8 @@ bool RSInteractorV2::IsKeyPressed(char key)
   return false;
 }
 
-void RSInteractorV2::CalculateRotation(double dx, double dy, double& angleX, double& angleY, double& angleZ)
+void RSInteractorV2::CalculateRotation(
+  double dx, double dy, double& angleX, double& angleY, double& angleZ)
 {
   // 计算旋转角度
   angleX = dy * m_rotationSpeed;
