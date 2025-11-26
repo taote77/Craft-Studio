@@ -100,6 +100,7 @@ void PlaterWidget::setupToolbar()
 {
   // 创建工具栏部件
   m_toolbarWidget = new QWidget();
+  m_toolbarWidget->setMaximumHeight(50);
   m_toolbarLayout = new QHBoxLayout(m_toolbarWidget);
   m_toolbarLayout->setContentsMargins(5, 5, 5, 5);
   m_toolbarLayout->setSpacing(5);
@@ -321,6 +322,7 @@ void PlaterWidget::setupRightPanel()
 
   // 创建标签页
   m_rightTabWidget = new QTabWidget();
+  m_rightTabWidget->setVisible(false);
   rightPanelLayout->addWidget(m_rightTabWidget);
 
   // 创建模型列表标签页

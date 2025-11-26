@@ -19,8 +19,6 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Gui Quick LinguistToo
 
 add_executable(${PROJECT_NAME}
   main.cc
-  # engine/rs_interactor_switch.h
-  # engine/rs_interactor_switch.cc
   engine/rs_interactor_trackball_camera.h
   engine/rs_interactor_trackball_camera.cc
   engine/rs_interactor_v2.h
@@ -43,8 +41,6 @@ add_executable(${PROJECT_NAME}
   ui/mainwindow.cc
   ui/menu_manager.h
   ui/menu_manager.cc
-  ui/model_viewer.h
-  ui/model_viewer.cc
   ui/project_tree.h
   ui/project_tree.cc
   ui/model_manager.h
