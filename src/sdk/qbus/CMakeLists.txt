@@ -1,5 +1,4 @@
-project(qdk)
-
+project(qbus)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -8,14 +7,22 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
 add_library(${PROJECT_NAME} SHARED)
 
 
+set(QBUS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
+
 target_sources(${PROJECT_NAME}  PRIVATE 
-    global.h
-    application.h
+    ${QBUS_INCLUDE_DIR}/qbus/qbus_global.h
+    ${QBUS_INCLUDE_DIR}/qbus/service_export.h
+    ${QBUS_INCLUDE_DIR}/qbus/application.h
+    ${QBUS_INCLUDE_DIR}/qbus/micro_service.h
+    ${QBUS_INCLUDE_DIR}/qbus/global_cxt.h
+    ${QBUS_INCLUDE_DIR}/qbus/service_manager.h
     application.cc
+    micro_service.cc
+    global_cxt.cc
+    service_manager.cc
 )
 
 
@@ -74,11 +81,15 @@ target_link_libraries( ${PROJECT_NAME} PRIVATE
 )
 
 
-
 target_include_directories(${PROJECT_NAME}  PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/../
+    "${CMAKE_CURRENT_LIST_DIR}/include"
+    ${CMAKE_CURRENT_LIST_DIR}
 )
 
-message(${CMAKE_CURRENT_LIST_DIR}  " CMAKE_CURRENT_LIST_DIR")
+add_subdirectory(test)
 
-target_link_libraries(${PROJECT_NAME}  PUBLIC protobuf)
+
+# target_link_libraries(${PROJECT_NAME}  PUBLIC
+#     protobuf
+# )
+

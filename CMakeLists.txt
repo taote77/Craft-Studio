@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 
-# list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(MasterWay LANGUAGES C CXX)
 
 
-include(cmake/global_build.cmake)
+include(cmake/build.cmake)
 
 
 set(CMAKE_AUTOUIC ON)

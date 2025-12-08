@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(CraftsStudioBackend LANGUAGES CXX)
+project(Backend LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -69,7 +69,7 @@ message(STATUS "VTK_VERSION: ${VTK_VERSION}")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   ${VTK_LIBRARIES}  
-  pdk
+  qbus
 )
 
 # vtk_module_autoinit is needed
@@ -79,7 +79,7 @@ vtk_module_autoinit(
 )
 
 
-
 target_include_directories(${PROJECT_NAME} PRIVATE
-  ${CMAKE_SOURCE_DIR}/src/sdk
+  ${CMAKE_SOURCE_DIR}/src/sdk/qbus/include
+  ${CMAKE_SOURCE_DIR}/src/sdk/pdk
 )

@@ -237,7 +237,7 @@ ReplyPtr Object::MakeWish(const QString& topic)
 
   auto reply = dispatcher_->CreateReply(topic);
   QObject::connect(reply.data(), &Reply::closed, this,
-    [=]
+    [this, topic]
     {
       dispatcher_->UntrackWish(topic);
       Unsubscribe(topic);

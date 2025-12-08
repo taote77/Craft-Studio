@@ -1,0 +1,18 @@
+include_guard(GLOBAL)
+include(CheckCXXCompilerFlag)
+
+
+set(OUTPUT_ROOT_DIR "${CMAKE_SOURCE_DIR}/build/output/")
+
+set(EXECUTABLE_OUTPUT_PATH ${OUTPUT_ROOT_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${OUTPUT_ROOT_DIR}/lib)
+set(PLUGIN_OUT_PATH ${OUTPUT_ROOT_DIR}/plugin)
+set(PROTOCOL_OUT_PATH ${OUTPUT_ROOT_DIR}/protocol)
+set(SETUP_OUTPUT_PATH ${PROJECT_BINARY_DIR}/setup)
+set(SETUP_RESOURCE_PATH ${PROJECT_SOURCE_DIR}/setup/resource)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/staticlib)
+
+set(CMAKE_ROOT_DIR ${PROJECT_SOURCE_DIR})
+
+add_compile_options(-Wno-psabi -g)

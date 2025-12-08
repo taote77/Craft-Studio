@@ -6,7 +6,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTORCC OFF)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,6 +16,15 @@ find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Gui Quick LinguistTools RE
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Gui Quick LinguistTools REQUIRED)
 
 # set(TS_FILES cv-app_zh_CN.ts)
+
+# === 2. 处理资源文件 (.qrc) ===
+set(RESOURCES "")
+
+if(${QT_VERSION_MAJOR} VERSION_EQUAL 6)
+    qt6_add_resources(RESOURCES app.qrc)
+elseif(${QT_VERSION_MAJOR} VERSION_EQUAL 5)
+    qt5_add_resources(RESOURCES app.qrc)
+endif()
 
 add_executable(${PROJECT_NAME}
   main.cc
@@ -53,7 +62,7 @@ add_executable(${PROJECT_NAME}
   ui/plater_widget.cc
   action_factory.h
   action_factory.cc
-  app.qrc
+  ${RESOURCES}
 )
 
 # target_compile_definitions(${PROJECT_NAME}  PRIVATE 
