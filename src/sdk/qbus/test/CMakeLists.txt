@@ -45,5 +45,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-  ${CMAKE_SOURCE_DIR}/src/sdk/qbus/include
+  ${CMAKE_SOURCE_DIR}/src/sdk/
 )

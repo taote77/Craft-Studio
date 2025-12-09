@@ -34,6 +34,4 @@ target_sources(pdk PRIVATE ${SOURCES})
 
 target_include_directories(pdk PUBLIC ${CMAKE_CURRENT_LIST_DIR}/../)
 
-message(${CMAKE_CURRENT_LIST_DIR}  " dddddddddd")
-
 target_link_libraries(pdk PUBLIC protobuf)

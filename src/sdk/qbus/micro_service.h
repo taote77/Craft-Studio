@@ -14,10 +14,10 @@ public:
   MicroService();
   virtual ~MicroService();
 
-protected:
-  virtual void Initialize();
+  virtual void init();
 
-  virtual void Cleanup();
+protected:
+  virtual void cleanup();
 };
 
 } // namespace qbus

@@ -4,11 +4,21 @@
 #include <QDir>
 #include <QMetaObject>
 #include <QObject>
+#include <QVector>
+
 #include <qbus/micro_service.h>
-#include <vector>
+#include <qbus/service_creator.h>
+#include <qthread.h>
 
 namespace qbus
 {
+
+struct ServiceCxt
+{
+  QThread* thread = nullptr;
+  MicroService* service = nullptr;
+  ServiceCreator* creator = nullptr;
+};
 
 class ServiceManager : public QObject
 {
@@ -31,7 +41,7 @@ protected:
   QStringList getPluginsLoadOrder(const QDir& plugin_dir);
 
 private:
-  std::vector<const QMetaObject*> _services_meta;
+  QVector<const QMetaObject*> _services_meta;
 };
 
 } // qbus

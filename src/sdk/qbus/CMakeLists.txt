@@ -10,19 +10,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(${PROJECT_NAME} SHARED)
 
 
-set(QBUS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
-
 target_sources(${PROJECT_NAME}  PRIVATE 
-    ${QBUS_INCLUDE_DIR}/qbus/qbus_global.h
-    ${QBUS_INCLUDE_DIR}/qbus/service_export.h
-    ${QBUS_INCLUDE_DIR}/qbus/application.h
-    ${QBUS_INCLUDE_DIR}/qbus/micro_service.h
-    ${QBUS_INCLUDE_DIR}/qbus/global_cxt.h
-    ${QBUS_INCLUDE_DIR}/qbus/service_manager.h
+    qbus_global.h
+    service_export.h
+    application.h
     application.cc
+    micro_service.h
     micro_service.cc
+    global_cxt.h
     global_cxt.cc
+    service_manager.h
     service_manager.cc
+    service_creator.h
+    service_creator.cc
 )
 
 
@@ -81,10 +81,11 @@ target_link_libraries( ${PROJECT_NAME} PRIVATE
 )
 
 
-target_include_directories(${PROJECT_NAME}  PRIVATE
-    "${CMAKE_CURRENT_LIST_DIR}/include"
-    ${CMAKE_CURRENT_LIST_DIR}
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/../
 )
+
+
 
 add_subdirectory(test)
 

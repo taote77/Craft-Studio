@@ -16,4 +16,5 @@ add_subdirectory(db)
 add_subdirectory(sys)
 
 add_subdirectory(q_sys)
+add_subdirectory(q_cloud)
 

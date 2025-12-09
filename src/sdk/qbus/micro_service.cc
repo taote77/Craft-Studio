@@ -17,12 +17,12 @@ MicroService::~MicroService()
   qDebug() << Q_FUNC_INFO;
 }
 
-void MicroService::Initialize()
+void MicroService::init()
 {
   //
 }
 
-void MicroService::Cleanup()
+void MicroService::cleanup()
 {
   //
 }

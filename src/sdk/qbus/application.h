@@ -2,6 +2,7 @@
 #define QBUS_APPLICATION_H
 
 #include <QApplication>
+
 #include <qbus/qbus_global.h>
 #include <qbus/service_manager.h>
 

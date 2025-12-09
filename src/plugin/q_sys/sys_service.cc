@@ -8,9 +8,9 @@ SysService::SysService()
   //   Qt::QueuedConnection);
 }
 
-void SysService::Initialize() {}
+void SysService::init() {}
 
-void SysService::Cleanup() {}
+void SysService::cleanup() {}
 
 QVariant SysService::OnFetchResult(const QVariant& data)
 {

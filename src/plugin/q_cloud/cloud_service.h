@@ -6,18 +6,20 @@
 
 class QVariant;
 
-class SysService : public qbus::MicroService
+class CloudService : public qbus::MicroService
 {
   Q_OBJECT
 public:
-  SysService();
+  CloudService();
 
 protected:
   void init() override;
 
   void cleanup() override;
 
-  QVariant OnFetchResult(const QVariant& data);
+  // service interface
+
+  void OnStartup(const QVariant& data);
 
 public slots:
 
