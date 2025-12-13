@@ -1,16 +1,18 @@
 #ifndef QBUS_SERVICE_CREATOR_H
 #define QBUS_SERVICE_CREATOR_H
 
+#include <QObject>
 #include <qbus/micro_service.h>
 
 namespace qbus
 {
 
-class ServiceCreator
+class ServiceCreator : public QObject
 {
+  Q_OBJECT
 public:
   ServiceCreator();
-  ~ServiceCreator();
+  // ~ServiceCreator();
 
 public slots:
   MicroService* createService(const QMetaObject* meta_object);

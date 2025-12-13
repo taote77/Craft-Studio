@@ -1,6 +1,7 @@
 #include "sys_service.h"
 
 #include <QVariant>
+#include <qglobal.h>
 
 SysService::SysService()
 {
@@ -8,7 +9,20 @@ SysService::SysService()
   //   Qt::QueuedConnection);
 }
 
-void SysService::init() {}
+QString SysService::serviceName() const
+{
+  return "sys";
+};
+
+void SysService::init()
+{
+  qDebug() << "SysService::init";
+}
+
+void SysService::startup()
+{
+  qDebug() << "SysService::startup";
+}
 
 void SysService::cleanup() {}
 

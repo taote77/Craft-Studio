@@ -17,7 +17,7 @@ public:
   virtual ~Application();
 
 protected:
-  void init();
+  void init(const QDir& work_dir);
 
 private:
   ServiceManager _service_manager;

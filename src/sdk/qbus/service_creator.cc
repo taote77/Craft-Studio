@@ -4,10 +4,15 @@
 namespace qbus
 {
 
+ServiceCreator::ServiceCreator()
+{
+  //
+}
+
 MicroService* ServiceCreator::createService(const QMetaObject* meta_object)
 {
   qDebug() << meta_object->className();
-  auto obj = qobject_cast<MicroService*>(meta_object->newInstance());
+  MicroService* obj = qobject_cast<MicroService*>(meta_object->newInstance());
   if (obj)
   {
     obj->init();

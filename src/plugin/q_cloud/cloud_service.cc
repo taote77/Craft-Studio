@@ -2,6 +2,7 @@
 
 #include <QDebug>
 #include <QVariant>
+#include <qglobal.h>
 
 CloudService::CloudService()
 {
@@ -9,7 +10,22 @@ CloudService::CloudService()
   //   Qt::QueuedConnection);
 }
 
-void CloudService::init() {}
+QString CloudService::serviceName() const
+{
+  return "cloud";
+};
+
+void CloudService::init()
+{
+  //
+  subscribe("sys/state/change", false);
+  qDebug() << "CloudService::init";
+}
+
+void CloudService::startup()
+{
+  qDebug() << "CloudService::startup";
+}
 
 void CloudService::cleanup() {}
 

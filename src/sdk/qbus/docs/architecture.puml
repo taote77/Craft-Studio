@@ -1,0 +1,33 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+component "Router / API Gateway" as Router
+component "QtSignalHub\n(QObject)" as SignalHub
+component "MicroService A\n(Publisher)" as A
+component "MicroService B\n(Subscriber)" as B
+component "MicroService C\n(Subscriber)" as C
+component "MicroService D\n(Publisher/Subscriber)" as D
+
+Router --> A : route:/a
+Router --> B : route:/b
+Router --> C : route:/c
+Router --> D : route:/d
+
+A --> SignalHub : publish(topic, payload)
+D --> SignalHub : publish(topic, payload)
+B --> SignalHub : subscribe(topic)
+C --> SignalHub : subscribe(topic)
+D --> SignalHub : subscribe(topic)
+
+SignalHub --> B : emit message(topic,payload)
+SignalHub --> C : emit message(topic,payload)
+SignalHub --> D : emit message(topic,payload)
+
+note right of SignalHub
+  Qt 信号槽充当消息总线（进程内）
+  - 发布: 调用 `SignalHub::publish(topic,payload)`
+  - 订阅: `QObject::connect(hub, &SignalHub::messagePublished, subscriber, &Subscriber::onMessage)`
+end note
+
+@enduml

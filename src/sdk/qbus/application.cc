@@ -8,7 +8,10 @@ namespace qbus
 Application::Application(int& argc, char** argv)
   : QApplication(argc, argv)
 {
-  init();
+
+  QDir work_dir{ "/home/shane/workspace/CraftStudio/build/output/plugin/Debug" };
+
+  init(work_dir);
 }
 
 Application::~Application()
@@ -16,11 +19,9 @@ Application::~Application()
   //
 }
 
-void Application::init()
+void Application::init(const QDir& work_dir)
 {
   //
-
-  QDir work_dir{ "/home/shane/workspace/CraftStudio/build/output/plugin/Debug" };
 
   _service_manager.loadServices(work_dir);
 }
