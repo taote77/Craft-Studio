@@ -5,7 +5,10 @@ add_library(${PROJECT_NAME} MODULE)
 set(SOURCES
     export.cc
     sys_service.cc
-    sys_service.h)
+    sys_service.h
+    wifi_service.cc
+    wifi_service.h
+)
 
 target_sources(${PROJECT_NAME} PRIVATE 
     ${SOURCES}

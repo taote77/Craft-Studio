@@ -1,16 +1,21 @@
 #ifndef _QBUS_MICRO_SERVICE_EVENT_H_
 #define _QBUS_MICRO_SERVICE_EVENT_H_
 
-#include "qbus/micro_service.h"
+// #include "qbus/micro_service.h"
 #include <QMetaType>
 #include <QVariant>
+#include <functional>
 
 namespace qbus
 {
 
-struct MicroServiceEvent
+using NotifyHandler = std::function<void(const QVariant&)>;
+
+using RequestHandler = std::function<QVariant(const QVariant&)>;
+
+struct Event
 {
-  int topic;
+  QString topic;
   QString from;
   QString to;
   QVariant data;
@@ -23,11 +28,11 @@ struct MicroServiceEvent
     FakeSync,  // Request:         eventloop can still work
     DangerSync // Invoke:          not thread safe
   };
-  Type type = MicroServiceEvent::Async;
+  Type type = Event::Async;
 };
 
 } // namespace qbus
 
-Q_DECLARE_METATYPE(qbus::MicroServiceEvent)
+Q_DECLARE_METATYPE(qbus::Event)
 
 #endif // _QBUS_EVENT_H_

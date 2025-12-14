@@ -19,6 +19,14 @@ void CloudService::init()
 {
   //
   subscribe("sys/state/change", false);
+
+  registerNotifyHandler("sys/state/change",
+    [this](const QVariant& data)
+    {
+      int state = data.toInt();
+      qDebug() << Q_FUNC_INFO << "CloudService sys/state/change" << state;
+    });
+
   qDebug() << "CloudService::init";
 }
 

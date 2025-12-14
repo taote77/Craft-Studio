@@ -1,28 +1,28 @@
-#include "sys_service.h"
+#include "wifi_service.h"
 
 #include <QString>
 #include <QVariant>
 
 #include <qglobal.h>
 
-SysService::SysService()
+WifiService::WifiService()
 {
   //   QObject::connect(&uploader_, &Uploader::preauth, this, &Cloud::UploadStart,
   //   Qt::QueuedConnection);
 }
 
-QString SysService::serviceName() const
+QString WifiService::serviceName() const
 {
-  return "sys";
+  return "sys.wifi";
 };
 
-void SysService::init()
+void WifiService::init()
 {
-  qDebug() << "SysService::init";
+  qDebug() << "WifiService::init";
 
   _timer = new QTimer(this);
 
-  QString topic = "sys/state/change";
+  QString topic = "sys/wifi/change";
   connect(_timer, &QTimer::timeout, this,
     [this, topic]()
     {
@@ -34,14 +34,14 @@ void SysService::init()
   _timer->start(3000);
 }
 
-void SysService::startup()
+void WifiService::startup()
 {
-  qDebug() << "SysService::startup";
+  qDebug() << "WifiService::startup";
 }
 
-void SysService::cleanup() {}
+void WifiService::cleanup() {}
 
-QVariant SysService::OnFetchResult(const QVariant& data)
+QVariant WifiService::OnFetchResult(const QVariant& data)
 {
   return 0;
 }

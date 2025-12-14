@@ -13,9 +13,8 @@
  * @note  负责微服务消息的分发、订阅、发布、请求、响应、异步、同步消息等功能。
  ***********************************************************************************/
 
-#include "qbus/micro_service_event.h"
+#include "qbus/service_event.h"
 #include <QObject>
-#include <qobject.h>
 
 namespace qbus
 {
@@ -27,10 +26,10 @@ public:
   Q_INVOKABLE explicit ServiceBus(QObject* parent = nullptr);
 
 public:
-  void PostMessage(const MicroServiceEvent& event);
+  void PostMessage(const Event& event);
 signals:
-  void onPub(const MicroServiceEvent& event);
-  void onSub(const MicroServiceEvent& event);
+  void onPub(const Event& event);
+  void onSub(const Event& event);
 };
 
 }

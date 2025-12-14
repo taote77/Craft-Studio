@@ -1,5 +1,5 @@
-#ifndef QSYS_DB_H
-#define QSYS_DB_H
+#ifndef MOD_SYS_WIFI_H
+#define MOD_SYS_WIFI_H
 
 #include <QDebug>
 #include <QObject>
@@ -8,11 +8,11 @@
 
 class QVariant;
 
-class SysService : public qbus::MicroService
+class WifiService : public qbus::MicroService
 {
   Q_OBJECT
 public:
-  Q_INVOKABLE SysService();
+  Q_INVOKABLE WifiService();
 
   QString serviceName() const override;
 
@@ -31,4 +31,4 @@ private:
   QTimer* _timer;
 };
 
-#endif // QSYS_DB_H
+#endif // MOD_SYS_WIFI_H

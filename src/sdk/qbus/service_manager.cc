@@ -6,6 +6,7 @@
 #include <QMetaObject>
 #include <QThreadPool>
 #include <qglobal.h>
+#include <qobject.h>
 
 namespace qbus
 {
@@ -88,7 +89,6 @@ void ServiceManager::createServices()
 {
   for (const QMetaObject* meta_obj : _services_meta)
   {
-
     ServiceCxt service_cxt;
     service_cxt.thread = new QThread();
     service_cxt.thread->setObjectName(meta_obj->className());
@@ -109,7 +109,6 @@ void ServiceManager::createServices()
       qCritical() << "create service object failed";
       continue;
     }
-
     service_cxt.service = service_obj;
 
     _services[service_obj->serviceName()] = service_cxt;
@@ -124,14 +123,19 @@ bool ServiceManager::initServices(ServiceBus* service_bus)
     return false;
   }
 
-  for (auto& service_cxt : _services)
+  // prepare object service interface
   {
-    if (service_cxt.service == nullptr)
+    for (auto& service_cxt : _services)
     {
-      qWarning() << "Service object is null!";
-      continue;
+      if (service_cxt.service == nullptr)
+      {
+        qWarning() << "Service object is null!";
+        continue;
+      }
+
+      // QObject::connect(service_cxt.service, &MicroService::sigSub, service_bus,
+      // &ServiceBus::onSub);
     }
-    service_cxt.service->init();
   }
 
   for (auto& service_cxt : _services)
@@ -141,6 +145,7 @@ bool ServiceManager::initServices(ServiceBus* service_bus)
       qWarning() << "Service object is null!";
       continue;
     }
+
     service_cxt.service->startup();
   }
 

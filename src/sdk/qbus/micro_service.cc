@@ -17,7 +17,10 @@ namespace qbus
 //   qDebug() << Q_FUNC_INFO;
 // }
 
-void MicroService::init() {}
+void MicroService::init()
+{
+  _dispatcher = new Dispatcher(this);
+}
 
 void MicroService::startup()
 {
@@ -27,6 +30,18 @@ void MicroService::startup()
 void MicroService::cleanup()
 {
   //
+}
+
+void MicroService::registerNotifyHandler(const QString& topic, NotifyHandler handler)
+{
+  //
+  _dispatcher->BindNotify(topic, handler);
+}
+
+void MicroService::registerRequestHandler(const QString& topic, RequestHandler handler)
+{
+  //
+  _dispatcher->BindRequest(topic, handler);
 }
 
 void MicroService::publish(const QString& topic, const QVariant& data)

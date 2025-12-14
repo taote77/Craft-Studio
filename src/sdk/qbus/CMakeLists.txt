@@ -25,7 +25,9 @@ target_sources(${PROJECT_NAME}  PRIVATE
     service_creator.cc
     service_bus.h
     service_bus.cc
-    micro_service_event.h
+    service_event.h
+    dispatcher.h
+    dispatcher.cc
 )
 
 
