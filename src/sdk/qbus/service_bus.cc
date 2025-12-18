@@ -1,6 +1,8 @@
 #include "service_bus.h"
 #include "qbus/micro_service.h"
+#include <QDebug>
 #include <memory>
+#include <qglobal.h>
 #include <qobjectdefs.h>
 
 namespace qbus
@@ -23,12 +25,17 @@ void ServiceBus::PostMessage(const Event& event)
   emit onPub(event);
 }
 
-void ServiceBus::onSub(const Event& event, std::shared_ptr<MicroService> sender)
+void ServiceBus::RegisterService(const QString& service_name, std::shared_ptr<MicroService> service)
+{
+  _service_list[service_name] = service;
+}
+
+void ServiceBus::onSub(const Event& event)
 {
   // Handle subscription events
   if (event.type == Event::Async)
   {
-    _subscribers[event.topic] = sender;
+    _subscribers[event.topic].emplace_back(event.from);
   }
 }
 
@@ -39,9 +46,16 @@ void ServiceBus::onPub(const Event& event)
     // Handle publish events
     if (_subscribers.contains(event.topic))
     {
-      QMetaObject::invokeMethod(_subscribers[event.topic].lock().get(), "handleNotify",
-        Qt::QueuedConnection, Q_ARG(Event, event));
-      // _subscribers[event.topic]->handleNotify(event);
+      for (auto& address : _subscribers[event.topic])
+      {
+        // invokemethod
+        auto service = _service_list[address].lock();
+        if (service)
+        {
+          QMetaObject::invokeMethod(
+            service.get(), "handleNotify", Qt::QueuedConnection, Q_ARG(Event, event));
+        }
+      }
     }
   }
 }

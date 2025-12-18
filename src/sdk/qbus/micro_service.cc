@@ -2,6 +2,7 @@
 #include <qbus/micro_service.h>
 
 #include <QDebug>
+#include <qglobal.h>
 #include <qobjectdefs.h>
 
 namespace qbus
@@ -43,9 +44,13 @@ void MicroService::handleNotify(const Event& event)
 void MicroService::registerNotifyHandler(const QString& topic, NotifyHandler handler)
 {
   //
+  qDebug() << Q_FUNC_INFO << topic;
   _dispatcher.BindNotify(topic, handler);
 
-  // Q_EMIT sigSub(topic);
+  Event event;
+  event.topic = topic;
+  event.from = this->serviceName();
+  Q_EMIT sigSub(event);
 }
 
 void MicroService::registerRequestHandler(const QString& topic, RequestHandler handler)
@@ -74,7 +79,7 @@ void MicroService::subscribe(const QString& topic, bool invokable)
   event.topic = topic;
   event.from = this->serviceName();
   event.type = Event::Async;
-  Q_EMIT sigSub(event, shared_from_this());
+  Q_EMIT sigSub(event);
 }
 void MicroService::unsubscribe(const QString& topic, bool invokable)
 {

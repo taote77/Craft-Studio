@@ -18,9 +18,7 @@ using NotifyHandler = std::function<void(const QVariant&)>;
 
 using RequestHandler = std::function<QVariant(const QVariant&)>;
 
-class QBUS_API MicroService
-  : public QObject
-  , public std::enable_shared_from_this<MicroService>
+class QBUS_API MicroService : public QObject
 {
   Q_OBJECT
 public:
@@ -59,7 +57,7 @@ signals:
   void sigPub(const Event& event);
 
   // 订阅广播消息
-  void sigSub(const Event& event, std::shared_ptr<MicroService> sender);
+  void sigSub(const Event& event);
 
   // 响应发布消息
   void onPub(const Event& event);

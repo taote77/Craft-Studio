@@ -1,6 +1,9 @@
 #include "dispatcher.h"
 
+#include <qglobal.h>
 #include <utility>
+
+#include <QDebug>
 
 namespace qbus
 {
@@ -25,6 +28,8 @@ void Dispatcher::BindRequest(const QString& topic, RequestHandler handler)
 
 void Dispatcher::HandleNotify(const Event& msg)
 {
+
+  qDebug() << "Dispatcher::HandleNotify" << msg.topic << msg.data;
 
   if (_notify_handlers.contains(msg.topic))
   {

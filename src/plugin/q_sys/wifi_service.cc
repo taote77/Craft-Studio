@@ -27,8 +27,8 @@ void WifiService::init()
     [this, topic]()
     {
       QVariant data{ 1 };
-      qDebug() << topic << data;
-      publish(topic, data);
+      // qDebug() << topic << data;
+      // publish(topic, data);
     });
 
   _timer->start(1000 * 20);

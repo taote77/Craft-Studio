@@ -26,12 +26,13 @@ void SysService::init()
   connect(_timer, &QTimer::timeout, this,
     [this, topic]()
     {
-      QVariant data{ 1 };
+      int alpha = 0;
+      QVariant data = alpha;
       qDebug() << topic << data;
       publish(topic, data);
     });
 
-  _timer->start(1000 * 10);
+  _timer->start(1000 * 5);
 }
 
 void SysService::startup()

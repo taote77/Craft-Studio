@@ -9,6 +9,8 @@
 #include <qglobal.h>
 
 #include <qbus/service_bus.h>
+#include <qnamespace.h>
+#include <qthread.h>
 
 namespace qbus
 {
@@ -19,8 +21,8 @@ ServiceManager::ServiceManager(QObject* parent)
 {
   qRegisterMetaType<MicroService*>("MicroService*");
   qRegisterMetaType<const QMetaObject*>("const QMetaObject*");
-  // qRegisterMetaType<std::shared_ptr<MicroService>>();
   qRegisterMetaType<ServicePtr>("ServicePtr");
+  qRegisterMetaType<Event>("Event");
 
   auto threadpool = QThreadPool::globalInstance();
   constexpr int kMaxThreadCount = 10;
@@ -33,7 +35,7 @@ ServiceManager::ServiceManager(QObject* parent)
 
   ServiceBus::instance(); // initialize singleton instance
 
-  qDebug() << "ServiceManager init...";
+  qDebug() << "ServiceManager initd ...";
 }
 
 ServiceManager::~ServiceManager()
@@ -101,11 +103,11 @@ void ServiceManager::createServices()
     service_cxt.creator = new ServiceCreator();
     service_cxt.creator->moveToThread(service_cxt.thread);
 
-    std::shared_ptr<MicroService> service_obj = nullptr;
+    MicroService* service_obj = nullptr;
 
-    bool ret = QMetaObject::invokeMethod(service_cxt.creator, "createService",
-      Qt::BlockingQueuedConnection, Q_RETURN_ARG(std::shared_ptr<MicroService>, service_obj),
-      Q_ARG(const QMetaObject*, meta_obj));
+    bool ret =
+      QMetaObject::invokeMethod(service_cxt.creator, "createService", Qt::BlockingQueuedConnection,
+        Q_RETURN_ARG(MicroService*, service_obj), Q_ARG(const QMetaObject*, meta_obj));
 
     qDebug() << "create service:" << meta_obj->className() << "," << ret;
 
@@ -115,10 +117,12 @@ void ServiceManager::createServices()
       continue;
     }
 
-    auto meta_con = QObject::connect(
-      service_obj.get(), &MicroService::sigPub, ServiceBus::instance(), &ServiceBus::onPub);
+    service_cxt.service.reset(service_obj);
 
-    service_cxt.service = service_obj;
+    ServiceBus::instance()->RegisterService(service_obj->serviceName(), service_cxt.service);
+
+    auto meta_con = QObject::connect(service_obj, &MicroService::sigPub, ServiceBus::instance(),
+      &ServiceBus::onPub, Qt::UniqueConnection);
 
     _services[service_obj->serviceName()] = service_cxt;
   }
@@ -136,8 +140,6 @@ bool ServiceManager::initServices()
         qWarning() << "Service object is null!";
         continue;
       }
-
-      // connect(service_cxt.service, &MicroService::sigSub, service_bus, &ServiceBus::onSub);
     }
   }
 
@@ -148,6 +150,8 @@ bool ServiceManager::initServices()
       qWarning() << "Service object is null!";
       continue;
     }
+
+    qDebug() << Q_FUNC_INFO << service_cxt.service->serviceName() << QThread::currentThread();
 
     service_cxt.service->startup();
   }

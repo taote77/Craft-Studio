@@ -36,13 +36,17 @@ private:
 public:
   void PostMessage(const Event& event);
 
+  void RegisterService(const QString& service_name, std::shared_ptr<MicroService> service);
+
 public slots:
   void onPub(const Event& event);
 
-  void onSub(const Event& event, std::shared_ptr<MicroService> sender);
+  void onSub(const Event& event);
 
 private:
-  std::map<QString, std::weak_ptr<MicroService>> _subscribers;
+  std::map<QString, std::weak_ptr<MicroService>> _service_list; // service_address, service_object
+
+  std::map<QString, std::list<QString>> _subscribers; // topic, service_address
 };
 
 }

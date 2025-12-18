@@ -16,8 +16,8 @@ using RequestHandler = std::function<QVariant(const QVariant&)>;
 struct Event
 {
   QString topic;
-  QString from;
-  QString to;
+  QString from; // source service
+  QString to;   // target service
   QVariant data;
   QVariantList args;
 
