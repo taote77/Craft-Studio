@@ -4,6 +4,7 @@
 #include <QObject>
 
 #include "qbus_global.h"
+#include <memory>
 #include <qbus/dispatcher.h>
 #include <qbus/service_event.h>
 
@@ -17,10 +18,14 @@ using NotifyHandler = std::function<void(const QVariant&)>;
 
 using RequestHandler = std::function<QVariant(const QVariant&)>;
 
-class QBUS_API MicroService : public QObject
+class QBUS_API MicroService
+  : public QObject
+  , public std::enable_shared_from_this<MicroService>
 {
   Q_OBJECT
 public:
+  MicroService();
+
   virtual QString serviceName() const = 0;
 
 public slots:
@@ -29,6 +34,8 @@ public slots:
   virtual void startup();
 
   virtual void cleanup();
+
+  void handleNotify(const Event& event);
 
 protected:
   // 注册并处理广播消息
@@ -46,14 +53,16 @@ protected:
   void unsubscribe(const QString& topic, bool invokable = false);
 
 private:
-  Dispatcher* _dispatcher;
+  Dispatcher _dispatcher;
 
 signals:
-  void sigPub(const QString& topic, const QVariant& data);
+  void sigPub(const Event& event);
 
-  void sigSub(const QString& topic);
+  // 订阅广播消息
+  void sigSub(const Event& event, std::shared_ptr<MicroService> sender);
 
-  void onPub(const QString& topic, const QVariant& data);
+  // 响应发布消息
+  void onPub(const Event& event);
 };
 
 } // namespace qbus

@@ -31,7 +31,7 @@ void WifiService::init()
       publish(topic, data);
     });
 
-  _timer->start(3000);
+  _timer->start(1000 * 20);
 }
 
 void WifiService::startup()

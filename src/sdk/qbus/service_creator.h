@@ -15,7 +15,7 @@ public:
   // ~ServiceCreator();
 
 public slots:
-  MicroService* createService(const QMetaObject* meta_object);
+  std::shared_ptr<MicroService> createService(const QMetaObject* meta_object);
 };
 
 } // namespace qbus

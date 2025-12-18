@@ -23,10 +23,8 @@ struct Event
 
   enum Type
   {
-    Async,     // Publish:
-    Sync,      // BlockRequest:    thread safe
-    FakeSync,  // Request:         eventloop can still work
-    DangerSync // Invoke:          not thread safe
+    Async, // Publish:
+    Sync,  // BlockRequest:
   };
   Type type = Event::Async;
 };

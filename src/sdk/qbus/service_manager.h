@@ -14,8 +14,8 @@
 #include <QThread>
 #include <QVector>
 
+#include <memory>
 #include <qbus/micro_service.h>
-#include <qbus/service_bus.h>
 #include <qbus/service_creator.h>
 
 namespace qbus
@@ -24,8 +24,9 @@ namespace qbus
 struct ServiceCxt
 {
   QThread* thread = nullptr;
-  MicroService* service = nullptr;
   ServiceCreator* creator = nullptr;
+  // MicroService* service = nullptr;
+  std::shared_ptr<MicroService> service;
 };
 
 class ServiceManager : public QObject
@@ -50,14 +51,12 @@ protected:
 
   void createServices(); // 创建插件
 
-  bool initServices(ServiceBus* service_bus); // 初始化发布订阅，请求响应相关服务
+  bool initServices(); // 初始化发布订阅，请求响应相关服务
 
 private:
   QVector<const QMetaObject*> _services_meta; // service meta
 
   QHash<QString, ServiceCxt> _services;
-
-  ServiceBus* _service_bus; // central service bus for all services
 };
 
 } // qbus
