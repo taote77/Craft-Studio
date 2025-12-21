@@ -35,6 +35,7 @@ void ServiceBus::onSub(const Event& event)
   // Handle subscription events
   if (event.type == Event::Async)
   {
+    qDebug() << "scribe: " << event.from;
     _subscribers[event.topic].emplace_back(event.from);
   }
 }
@@ -48,6 +49,8 @@ void ServiceBus::onPub(const Event& event)
     {
       for (auto& address : _subscribers[event.topic])
       {
+
+        qDebug() << "on pub";
         // invokemethod
         auto service = _service_list[address].lock();
         if (service)
@@ -56,6 +59,10 @@ void ServiceBus::onPub(const Event& event)
             service.get(), "handleNotify", Qt::QueuedConnection, Q_ARG(Event, event));
         }
       }
+    }
+    else
+    {
+      qWarning() << "No subscribers for topic:" << event.topic;
     }
   }
 }

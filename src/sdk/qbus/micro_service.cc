@@ -43,7 +43,6 @@ void MicroService::handleNotify(const Event& event)
 
 void MicroService::registerNotifyHandler(const QString& topic, NotifyHandler handler)
 {
-  //
   qDebug() << Q_FUNC_INFO << topic;
   _dispatcher.BindNotify(topic, handler);
 
@@ -68,13 +67,12 @@ void MicroService::publish(const QString& topic, const QVariant& data)
   event.type = Event::Async;
   event.from = this->serviceName();
 
+  qDebug() << "sigPub  pub";
   Q_EMIT sigPub(event);
 }
 
 void MicroService::subscribe(const QString& topic, bool invokable)
 {
-  //
-  // Q_EMIT sigSub(topic);
   Event event;
   event.topic = topic;
   event.from = this->serviceName();
@@ -83,7 +81,11 @@ void MicroService::subscribe(const QString& topic, bool invokable)
 }
 void MicroService::unsubscribe(const QString& topic, bool invokable)
 {
-  //
+  Event event;
+  event.topic = topic;
+  event.from = this->serviceName();
+  event.type = Event::Async;
+  Q_EMIT sigUnsub(event);
 }
 
 } // namespace qbus

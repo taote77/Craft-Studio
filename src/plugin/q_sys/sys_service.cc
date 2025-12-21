@@ -1,9 +1,14 @@
 #include "sys_service.h"
 
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QString>
+#include <QStringView>
+#include <QThread>
 #include <QVariant>
 
 #include <qglobal.h>
+#include <qjsonobject.h>
 
 SysService::SysService()
 {
@@ -18,26 +23,36 @@ QString SysService::serviceName() const
 
 void SysService::init()
 {
-  qDebug() << "SysService::init";
+  qDebug() << Q_FUNC_INFO << QThread::currentThread();
 
-  _timer = new QTimer(this);
+  // QString topic_sys_state_change = "sys/resource/info";
+  // registerNotifyHandler(topic_sys_state_change,
+  //   [this](const QVariant& data)
+  //   {
+  //     int state = data.toInt();
 
-  QString topic = "sys/state/change";
-  connect(_timer, &QTimer::timeout, this,
-    [this, topic]()
-    {
-      int alpha = 0;
-      QVariant data = alpha;
-      qDebug() << topic << data;
-      publish(topic, data);
-    });
-
-  _timer->start(1000 * 5);
+  //     qDebug() << Q_FUNC_INFO << state;
+  //   });
 }
 
 void SysService::startup()
 {
   qDebug() << "SysService::startup";
+
+  _timer = new QTimer(this);
+
+  QString topic = "sys/resource/info";
+  connect(_timer, &QTimer::timeout, this,
+    [this, topic]()
+    {
+      QJsonObject json_info;
+      json_info["cpu"] = 40;
+      json_info["mem"] = 40;
+
+      publish(topic, json_info);
+    });
+
+  _timer->start(1000 * 5);
 }
 
 void SysService::cleanup() {}

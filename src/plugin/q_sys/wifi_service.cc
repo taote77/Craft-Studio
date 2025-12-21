@@ -1,14 +1,14 @@
 #include "wifi_service.h"
 
 #include <QString>
+#include <QThread>
 #include <QVariant>
 
 #include <qglobal.h>
 
 WifiService::WifiService()
 {
-  //   QObject::connect(&uploader_, &Uploader::preauth, this, &Cloud::UploadStart,
-  //   Qt::QueuedConnection);
+  //
 }
 
 QString WifiService::serviceName() const
@@ -18,20 +18,21 @@ QString WifiService::serviceName() const
 
 void WifiService::init()
 {
-  qDebug() << "WifiService::init";
 
-  _timer = new QTimer(this);
+  qDebug() << Q_FUNC_INFO << QThread::currentThread();
 
-  QString topic = "sys/wifi/change";
-  connect(_timer, &QTimer::timeout, this,
-    [this, topic]()
-    {
-      QVariant data{ 1 };
-      // qDebug() << topic << data;
-      // publish(topic, data);
-    });
+  // _timer = new QTimer(this);
 
-  _timer->start(1000 * 20);
+  // QString topic = "sys/wifi/change";
+  // connect(_timer, &QTimer::timeout, this,
+  //   [this, topic]()
+  //   {
+  //     QVariant data{ 1 };
+  //     // qDebug() << topic << data;
+  //     // publish(topic, data);
+  //   });
+
+  // _timer->start(1000 * 20);
 }
 
 void WifiService::startup()

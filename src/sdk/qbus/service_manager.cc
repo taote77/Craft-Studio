@@ -10,6 +10,7 @@
 
 #include <qbus/service_bus.h>
 #include <qnamespace.h>
+#include <qobjectdefs.h>
 #include <qthread.h>
 
 namespace qbus
@@ -130,8 +131,6 @@ void ServiceManager::createServices()
 
 bool ServiceManager::initServices()
 {
-
-  // prepare object service interface
   {
     for (auto& service_cxt : _services)
     {
@@ -153,7 +152,7 @@ bool ServiceManager::initServices()
 
     qDebug() << Q_FUNC_INFO << service_cxt.service->serviceName() << QThread::currentThread();
 
-    service_cxt.service->startup();
+    QMetaObject::invokeMethod(service_cxt.service.get(), "startup", Qt::BlockingQueuedConnection);
   }
 
   return true;

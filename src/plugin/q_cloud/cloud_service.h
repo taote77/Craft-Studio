@@ -27,7 +27,8 @@ protected:
 
   void OnStartup(const QVariant& data);
 
-private:
+  void OnUpload(const QVariant& data);
+
 signals:
   void pub(const QString& topic, const QVariant& data);
 

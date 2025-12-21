@@ -7,7 +7,12 @@
 **
 *******************************************************************************/
 
-class GlobalCxt
+#include "qbus/qbus_global.h"
+
+namespace qbus
+{
+
+class QBUS_API GlobalCxt
 {
 public:
   static GlobalCxt* GetInstance();
@@ -16,5 +21,7 @@ private:
   GlobalCxt();
   ~GlobalCxt();
 };
+
+}
 
 #endif // QBUS_GLOBAL_CXT_H

@@ -1,13 +1,13 @@
 #include "cloud_service.h"
 
 #include <QDebug>
+#include <QThread>
 #include <QVariant>
 #include <qglobal.h>
 
 CloudService::CloudService()
 {
-  //   QObject::connect(&uploader_, &Uploader::preauth, this, &Cloud::UploadStart,
-  //   Qt::QueuedConnection);
+  //
 }
 
 QString CloudService::serviceName() const
@@ -17,8 +17,7 @@ QString CloudService::serviceName() const
 
 void CloudService::init()
 {
-  //
-  subscribe("sys/state/change", false);
+  qDebug() << Q_FUNC_INFO << QThread::currentThread();
 
   registerNotifyHandler("sys/state/change",
     [this](const QVariant& data)
@@ -27,7 +26,7 @@ void CloudService::init()
       qDebug() << Q_FUNC_INFO << "CloudService sys/state/change" << state;
     });
 
-  qDebug() << "CloudService::init";
+  registerNotifyHandler("cloud/upload", [this](const QVariant& data) { OnUpload(data); });
 }
 
 void CloudService::startup()
@@ -40,5 +39,10 @@ void CloudService::cleanup() {}
 void CloudService::OnStartup(const QVariant& data)
 {
   qDebug() << "CloudService::OnStartup";
-  return;
+}
+
+void CloudService::OnUpload(const QVariant& data)
+{
+  auto path = data.value<QString>();
+  qDebug() << Q_FUNC_INFO << path;
 }

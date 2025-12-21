@@ -59,6 +59,8 @@ signals:
   // 订阅广播消息
   void sigSub(const Event& event);
 
+  void sigUnsub(const Event& event);
+
   // 响应发布消息
   void onPub(const Event& event);
 };

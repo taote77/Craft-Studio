@@ -15,15 +15,15 @@
 
 #include "qbus/micro_service.h"
 #include "qbus/service_event.h"
+#include "qbus_global.h"
 
 #include <QObject>
 #include <memory>
-#include <qchar.h>
 
 namespace qbus
 {
 
-class ServiceBus : public QObject
+class QBUS_API ServiceBus : public QObject
 {
   Q_OBJECT
 
