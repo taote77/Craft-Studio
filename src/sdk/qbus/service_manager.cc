@@ -1,11 +1,14 @@
 #include <qbus/service_export.h>
 #include <qbus/service_manager.h>
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QLibrary>
+#include <QMetaMethod>
 #include <QMetaObject>
 #include <QObject>
 #include <QThreadPool>
+
 #include <qglobal.h>
 
 #include <qbus/service_bus.h>
@@ -97,18 +100,29 @@ void ServiceManager::createServices()
 {
   for (const QMetaObject* meta_obj : _services_meta)
   {
+    // const char* with_gui = "withGui";
     ServiceCxt service_cxt;
-    service_cxt.thread = new QThread();
+    if (meta_obj->indexOfProperty(R"(withGui)") != -1)
+    {
+      qDebug() << "withGui";
+      service_cxt.thread = QCoreApplication::instance()->thread();
+      service_cxt.gui_service = true;
+    }
+    else
+    {
+      service_cxt.thread = new QThread();
+    }
+
     service_cxt.thread->setObjectName(meta_obj->className());
-    service_cxt.thread->start();
     service_cxt.creator = new ServiceCreator();
     service_cxt.creator->moveToThread(service_cxt.thread);
+    service_cxt.thread->start();
 
     MicroService* service_obj = nullptr;
 
-    bool ret =
-      QMetaObject::invokeMethod(service_cxt.creator, "createService", Qt::BlockingQueuedConnection,
-        Q_RETURN_ARG(MicroService*, service_obj), Q_ARG(const QMetaObject*, meta_obj));
+    bool ret = QMetaObject::invokeMethod(service_cxt.creator, "createService",
+      service_cxt.gui_service ? Qt::DirectConnection : Qt::BlockingQueuedConnection,
+      Q_RETURN_ARG(MicroService*, service_obj), Q_ARG(const QMetaObject*, meta_obj));
 
     qDebug() << "create service:" << meta_obj->className() << "," << ret;
 
@@ -152,7 +166,8 @@ bool ServiceManager::initServices()
 
     qDebug() << Q_FUNC_INFO << service_cxt.service->serviceName() << QThread::currentThread();
 
-    QMetaObject::invokeMethod(service_cxt.service.get(), "startup", Qt::BlockingQueuedConnection);
+    QMetaObject::invokeMethod(service_cxt.service.get(), "startup",
+      service_cxt.gui_service ? Qt::DirectConnection : Qt::BlockingQueuedConnection);
   }
 
   return true;

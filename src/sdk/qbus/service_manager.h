@@ -25,8 +25,8 @@ struct ServiceCxt
 {
   QThread* thread = nullptr;
   ServiceCreator* creator = nullptr;
-  // MicroService* service = nullptr;
   std::shared_ptr<MicroService> service;
+  bool gui_service = false; // 如果服务包含GUI控件，则设置为true
 };
 
 class ServiceManager : public QObject

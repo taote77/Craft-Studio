@@ -6,6 +6,6 @@ add_subdirectory(CraftsStudio)
 
 add_subdirectory(Backend)
 
-# add_subdirectory(clipper_app)
+add_subdirectory(clipper_app)
 
 # add_subdirectory(ui-test)

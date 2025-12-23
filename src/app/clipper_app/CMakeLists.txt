@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.20)
 
 # 查找所需的包
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+# find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+
+
+
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Gui REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Gui REQUIRED)
+
+
 find_package(Clipper2 REQUIRED)
 
 # 创建应用程序
@@ -18,11 +25,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     target_compile_options(clipper_app PRIVATE -Wno-pedantic)
 endif()
 
+
+
 # 链接库
 target_link_libraries(clipper_app
     PRIVATE
-    Qt6::Core
-    Qt6::Widgets
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Widgets
     Clipper2::Clipper2
 )
 
