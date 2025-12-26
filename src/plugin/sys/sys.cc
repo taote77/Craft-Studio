@@ -2,11 +2,7 @@
 
 QString Sys::kModuleAddress = "";
 
-Sys::Sys()
-{
-  //   QObject::connect(&uploader_, &Uploader::preauth, this, &Cloud::UploadStart,
-  //   Qt::QueuedConnection);
-}
+Sys::Sys() {}
 
 void Sys::Run()
 {

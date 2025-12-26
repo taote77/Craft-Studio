@@ -3,8 +3,10 @@
 
 #include <QObject>
 #include <qbus/micro_service.h>
+#include <qobject.h>
 
 class QVariant;
+class QRunnable; // #include <QRunnable>
 
 class ClipperService : public qbus::MicroService
 {
@@ -27,13 +29,18 @@ protected:
 
   void OnStartup(const QVariant& data);
 
-  void OnUpload(const QVariant& data);
+  QVariant OnProcess(const QVariant& data);
 
 signals:
   void pub(const QString& topic, const QVariant& data);
 
+  void finish(const QString& result);
+
 protected slots:
   void OnPub(const QString& topic, const QVariant& data);
+
+private:
+  QRunnable* _work;
 };
 
 #endif // QSYS_DB_H

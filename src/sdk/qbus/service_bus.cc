@@ -4,6 +4,7 @@
 #include <memory>
 #include <qglobal.h>
 #include <qobjectdefs.h>
+#include <qvariant.h>
 
 namespace qbus
 {
@@ -38,6 +39,11 @@ void ServiceBus::onSub(const Event& event)
     qDebug() << "scribe: " << event.from;
     _subscribers[event.topic].emplace_back(event.from);
   }
+  else if (event.type == Event::Sync)
+  {
+    qDebug() << "add sync service interface: " << event.from;
+    _serves[event.topic] = event.from;
+  }
 }
 
 void ServiceBus::onPub(const Event& event)
@@ -65,6 +71,41 @@ void ServiceBus::onPub(const Event& event)
       qWarning() << "No subscribers for topic:" << event.topic;
     }
   }
+}
+
+QVariant ServiceBus::onRequest(const Event& event)
+{
+
+  qDebug() << Q_FUNC_INFO << event.topic << event.type << event.data;
+
+  if (event.type == Event::Sync)
+  {
+    // Handle publish events
+    if (_serves.contains(event.topic))
+    {
+      for (auto& address : _serves[event.topic])
+      {
+
+        qDebug() << Q_FUNC_INFO << "on request" << __LINE__ << event.topic << _serves.size();
+        auto service = _service_list[address].lock();
+        if (service)
+        {
+          QVariant ret;
+          bool rr = QMetaObject::invokeMethod(service.get(), "handleRequest",
+            Qt::BlockingQueuedConnection, Q_RETURN_ARG(QVariant, ret), Q_ARG(Event, event));
+
+          qDebug() << "ret===============:" << rr << ret;
+          return ret;
+        }
+      }
+    }
+    else
+    {
+      qWarning() << "No subscribers for topic:" << event.topic;
+    }
+  }
+
+  return {};
 }
 
 } // namespace qbus

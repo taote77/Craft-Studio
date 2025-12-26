@@ -18,21 +18,7 @@ QString WifiService::serviceName() const
 
 void WifiService::init()
 {
-
   qDebug() << Q_FUNC_INFO << QThread::currentThread();
-
-  // _timer = new QTimer(this);
-
-  // QString topic = "sys/wifi/change";
-  // connect(_timer, &QTimer::timeout, this,
-  //   [this, topic]()
-  //   {
-  //     QVariant data{ 1 };
-  //     // qDebug() << topic << data;
-  //     // publish(topic, data);
-  //   });
-
-  // _timer->start(1000 * 20);
 }
 
 void WifiService::startup()

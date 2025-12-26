@@ -7,8 +7,10 @@
 #include <QThread>
 #include <QVariant>
 
+#include <qchar.h>
 #include <qglobal.h>
 #include <qjsonobject.h>
+#include <qtimer.h>
 
 SysService::SysService()
 {
@@ -25,14 +27,14 @@ void SysService::init()
 {
   qDebug() << Q_FUNC_INFO << QThread::currentThread();
 
-  // QString topic_sys_state_change = "sys/resource/info";
-  // registerNotifyHandler(topic_sys_state_change,
-  //   [this](const QVariant& data)
-  //   {
-  //     int state = data.toInt();
+  QString topic_sys_state_change = "sys/resource/info";
+  registerNotifyHandler(topic_sys_state_change,
+    [this](const QVariant& data)
+    {
+      auto state = data.toJsonObject();
 
-  //     qDebug() << Q_FUNC_INFO << state;
-  //   });
+      qDebug() << Q_FUNC_INFO << state;
+    });
 }
 
 void SysService::startup()
@@ -53,6 +55,16 @@ void SysService::startup()
     });
 
   _timer->start(1000 * 5);
+
+  QTimer::singleShot(1000 * 5,
+    [this]()
+    {
+      QString topic_bool{ "clipper/bool" };
+      qDebug() << "request" << topic_bool;
+
+      auto ret = request(topic_bool, 4);
+      qDebug() << "request" << ret;
+    });
 }
 
 void SysService::cleanup() {}

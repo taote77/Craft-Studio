@@ -27,8 +27,6 @@ protected:
   QVariant OnFetchResult(const QVariant& data);
 
 public:
-private:
-  QTimer* _timer;
 };
 
 #endif // MOD_SYS_WIFI_H

@@ -7,6 +7,7 @@
 #include <QHash>
 #include <QObject>
 #include <QString>
+#include <qvariant.h>
 
 namespace qbus
 {
@@ -26,6 +27,8 @@ public:
   void BindRequest(const QString& topic, RequestHandler handler);
 
   void HandleNotify(const Event& msg);
+
+  QVariant HandleRequest(const Event& msg);
 
 private:
   QHash<QString, NotifyHandler> _notify_handlers;

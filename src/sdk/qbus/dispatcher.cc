@@ -37,4 +37,17 @@ void Dispatcher::HandleNotify(const Event& msg)
   }
 }
 
+QVariant Dispatcher::HandleRequest(const Event& msg)
+{
+
+  qDebug() << "Dispatcher::HandleRequest" << msg.topic << msg.data;
+
+  if (_request_handlers.contains(msg.topic))
+  {
+    return _request_handlers[msg.topic](msg.data);
+  }
+
+  return QVariant();
+}
+
 }

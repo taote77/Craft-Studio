@@ -19,6 +19,7 @@
 
 #include <QObject>
 #include <memory>
+#include <qvariant.h>
 
 namespace qbus
 {
@@ -43,10 +44,17 @@ public slots:
 
   void onSub(const Event& event);
 
+  QVariant onRequest(const Event& event);
+
 private:
   std::map<QString, std::weak_ptr<MicroService>> _service_list; // service_address, service_object
 
   std::map<QString, std::list<QString>> _subscribers; // topic, service_address
+
+  ///
+  std::map<QString, std::weak_ptr<MicroService>> _invoker_list; // service_address, service_object
+
+  std::map<QString, QString> _serves; // topic, service_address
 };
 
 }

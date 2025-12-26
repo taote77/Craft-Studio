@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <qglobal.h>
 #include <qobjectdefs.h>
+#include <qvariant.h>
 
 namespace qbus
 {
@@ -41,6 +42,11 @@ void MicroService::handleNotify(const Event& event)
   _dispatcher.HandleNotify(event);
 }
 
+QVariant MicroService::handleRequest(const Event& event)
+{
+  return _dispatcher.HandleRequest(event);
+}
+
 void MicroService::registerNotifyHandler(const QString& topic, NotifyHandler handler)
 {
   qDebug() << Q_FUNC_INFO << topic;
@@ -49,6 +55,8 @@ void MicroService::registerNotifyHandler(const QString& topic, NotifyHandler han
   Event event;
   event.topic = topic;
   event.from = this->serviceName();
+  event.type = Event::Async;
+
   Q_EMIT sigSub(event);
 }
 
@@ -56,35 +64,55 @@ void MicroService::registerRequestHandler(const QString& topic, RequestHandler h
 {
   //
   _dispatcher.BindRequest(topic, handler);
+
+  Event event;
+  event.topic = topic;
+  event.from = this->serviceName();
+  event.type = Event::Sync;
+
+  Q_EMIT sigSub(event);
 }
 
 void MicroService::publish(const QString& topic, const QVariant& data)
 {
-  //
   Event event;
   event.topic = topic;
   event.data = data;
   event.type = Event::Async;
   event.from = this->serviceName();
 
-  qDebug() << "sigPub  pub";
+  // qDebug() << "sigPub  pub";
   Q_EMIT sigPub(event);
 }
 
-void MicroService::subscribe(const QString& topic, bool invokable)
+QVariant MicroService::request(const QString& topic, const QVariant& data)
+{
+  Event event;
+  event.topic = topic;
+  event.data = data;
+  event.type = Event::Sync;
+  event.from = this->serviceName();
+
+  qDebug() << "emit  sigRequest";
+  return Q_EMIT sigRequest(event);
+}
+
+void MicroService::subscribe(const QString& topic, bool sync)
 {
   Event event;
   event.topic = topic;
   event.from = this->serviceName();
-  event.type = Event::Async;
+  event.type = sync ? Event::Sync : Event::Async;
+
   Q_EMIT sigSub(event);
 }
-void MicroService::unsubscribe(const QString& topic, bool invokable)
+void MicroService::unsubscribe(const QString& topic, bool sync)
 {
   Event event;
   event.topic = topic;
   event.from = this->serviceName();
-  event.type = Event::Async;
+  event.type = sync ? Event::Sync : Event::Async;
+
   Q_EMIT sigUnsub(event);
 }
 

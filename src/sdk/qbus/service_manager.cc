@@ -136,8 +136,11 @@ void ServiceManager::createServices()
 
     ServiceBus::instance()->RegisterService(service_obj->serviceName(), service_cxt.service);
 
-    auto meta_con = QObject::connect(service_obj, &MicroService::sigPub, ServiceBus::instance(),
+    auto ccon = QObject::connect(service_obj, &MicroService::sigPub, ServiceBus::instance(),
       &ServiceBus::onPub, Qt::UniqueConnection);
+
+    ccon = QObject::connect(service_obj, &MicroService::sigRequest, ServiceBus::instance(),
+      &ServiceBus::onRequest, Qt::DirectConnection);
 
     _services[service_obj->serviceName()] = service_cxt;
   }
