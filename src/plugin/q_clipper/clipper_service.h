@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <qbus/micro_service.h>
-#include <qobject.h>
 
 class QVariant;
 class QRunnable; // #include <QRunnable>
@@ -16,8 +15,7 @@ public:
 
   QString serviceName() const override;
 
-public slots:
-
+protected slots:
   void init() override;
 
   void startup() override;
@@ -30,6 +28,8 @@ protected:
   void OnStartup(const QVariant& data);
 
   QVariant OnProcess(const QVariant& data);
+
+  void process(const QVariant& data);
 
 signals:
   void pub(const QString& topic, const QVariant& data);

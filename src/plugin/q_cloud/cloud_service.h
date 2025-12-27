@@ -12,7 +12,7 @@ class CloudService : public qbus::MicroService
 public:
   Q_INVOKABLE CloudService();
 
-  QString serviceName() const;
+  QString serviceName() const override;
 
 public slots:
 

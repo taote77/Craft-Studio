@@ -88,9 +88,9 @@ if(NOT(TARGET VTK::GUISupportQt))
   message(FATAL_ERROR "MinimalQtVTKApp: VTK not built with Qt support.")
 endif()
 
-if(NOT DEFINED VTK_QT_VERSION)
-  set(VTK_QT_VERSION 5)
-endif()
+# if(NOT DEFINED VTK_QT_VERSION)
+#   set(VTK_QT_VERSION 5)
+# endif()
 
 
 find_package(TBB REQUIRED)
