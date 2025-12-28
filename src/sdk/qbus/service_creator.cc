@@ -14,7 +14,7 @@ ServiceCreator::ServiceCreator()
 
 MicroService* ServiceCreator::createService(const QMetaObject* meta_object)
 {
-  qDebug() << meta_object->className();
+  qDebug() << "==================" << meta_object->className();
   MicroService* obj = qobject_cast<MicroService*>(meta_object->newInstance());
   if (obj)
   {

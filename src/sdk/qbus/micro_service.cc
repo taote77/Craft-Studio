@@ -94,7 +94,10 @@ QVariant MicroService::request(const QString& topic, const QVariant& data)
   event.from = this->serviceName();
 
   qDebug() << "emit  sigRequest";
-  return Q_EMIT sigRequest(event);
+
+  // qDebug() << "emit  sigRequest ret" << wew;
+  // return wew;
+  return emit sigRequest(event);
 }
 
 void MicroService::subscribe(const QString& topic, bool sync)

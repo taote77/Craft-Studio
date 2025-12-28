@@ -63,6 +63,7 @@ void ServiceManager::loadServices(const QDir& plugin_dir)
         get_services_meta(&plugin_export);
         for (const QMetaObject* meta_obj : plugin_export.meta_objects)
         {
+          // qDebug()<<
           _services_meta.push_back(meta_obj);
         }
       }
@@ -111,9 +112,9 @@ void ServiceManager::createServices()
     else
     {
       service_cxt.thread = new QThread();
+      service_cxt.thread->setObjectName(meta_obj->className());
     }
 
-    service_cxt.thread->setObjectName(meta_obj->className());
     service_cxt.creator = new ServiceCreator();
     service_cxt.creator->moveToThread(service_cxt.thread);
     service_cxt.thread->start();
@@ -132,17 +133,19 @@ void ServiceManager::createServices()
       continue;
     }
 
-    service_cxt.service.reset(service_obj);
+    service_cxt.service.reset(service_obj); // service_obj not valid after this statement
 
-    ServiceBus::instance()->RegisterService(service_obj->serviceName(), service_cxt.service);
+    ServiceBus::instance()->RegisterService(
+      service_cxt.service->serviceName(), service_cxt.service);
 
-    auto ccon = QObject::connect(service_obj, &MicroService::sigPub, ServiceBus::instance(),
-      &ServiceBus::onPub, Qt::UniqueConnection);
+    auto ccon = QObject::connect(service_cxt.service.get(), &MicroService::sigPub,
+      ServiceBus::instance(), &ServiceBus::onPub, Qt::UniqueConnection);
 
-    ccon = QObject::connect(service_obj, &MicroService::sigRequest, ServiceBus::instance(),
-      &ServiceBus::onRequest, Qt::DirectConnection);
+    ccon = QObject::connect(service_cxt.service.get(), &MicroService::sigRequest,
+      ServiceBus::instance(), &ServiceBus::onRequest, Qt::DirectConnection);
 
-    _services[service_obj->serviceName()] = service_cxt;
+    qDebug() << "connect service:" << service_cxt.service->serviceName();
+    _services[service_cxt.service->serviceName()] = service_cxt;
   }
 }
 

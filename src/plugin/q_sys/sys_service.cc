@@ -51,6 +51,13 @@ void SysService::startup()
       json_info["cpu"] = 40;
       json_info["mem"] = 40;
 
+      static int c{ 0 };
+      if (c >= 2)
+      {
+        _timer->stop();
+      }
+      c++;
+
       publish(topic, json_info);
     });
 
@@ -63,7 +70,8 @@ void SysService::startup()
       qDebug() << "request" << topic_bool;
 
       auto ret = request(topic_bool, 4);
-      qDebug() << "request" << ret;
+      int ret_int = ret.toInt();
+      qDebug() << "request ==========" << ret_int;
     });
 }
 
