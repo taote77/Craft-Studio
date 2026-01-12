@@ -4,3 +4,4 @@ CMakeLists.txt.user
 .vscode
 src/app/.trash
 __pycache__
+.trae

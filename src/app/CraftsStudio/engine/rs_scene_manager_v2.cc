@@ -13,6 +13,11 @@ SceneManagerV2* SceneManagerV2::getInstance()
   return &instance;
 }
 
+void SceneManagerV2::setRenderer(vtkSmartPointer<vtkRenderer> renderer)
+{
+  m_renderer = renderer;
+}
+
 SceneManagerV2::SceneManagerV2()
 {
   // 初始化构建平台
@@ -60,6 +65,13 @@ void SceneManagerV2::addObject(SceneObjectV2* obj, SceneObjectV2* parent)
     m_rootObjects.append(obj); // 根对象加入顶层列表
     emit rootObjectAdded(obj);
   }
+  
+  // 将Actor添加到渲染器
+  if (obj->actor() && m_renderer)
+  {
+    m_renderer->AddActor(obj->actor());
+  }
+  
   emit objectAdded(obj);
 }
 
@@ -95,6 +107,12 @@ void SceneManagerV2::removeObject(SceneObjectV2* obj)
 
   // 移除映射
   removeActorMapping(obj);
+
+  // 从渲染器移除Actor
+  if (obj->actor() && m_renderer)
+  {
+    m_renderer->RemoveActor(obj->actor());
+  }
 
   // 断开信号
   disconnect(obj, nullptr, this, nullptr);

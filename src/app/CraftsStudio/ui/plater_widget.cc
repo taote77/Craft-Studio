@@ -1,5 +1,6 @@
 #include "plater_widget.h"
 
+#include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
@@ -303,6 +304,12 @@ void PlaterWidget::setupViewport()
   {
     connect(m_buildPlatform, &BuildPlatform::platformUpdated, this,
       &PlaterWidget::onPlatformPropertyChanged);
+  }
+
+  // 将渲染器传递给场景管理器
+  if (m_sceneManager)
+  {
+    m_sceneManager->setRenderer(m_renderer);
   }
 }
 
@@ -914,19 +921,30 @@ void PlaterWidget::updateModelInfo()
     // 名称
     m_modelTable->setItem(row, 0, new QTableWidgetItem(obj->name()));
 
-    // 尺寸 - 暂时使用固定值，后续根据SceneObject扩展
+    // 尺寸
+    QVector3D size = obj->getSize();
     m_modelTable->setItem(row, 1,
       new QTableWidgetItem(
-        QString("%1x%2x%3").arg(10.0, 0, 'f', 1).arg(10.0, 0, 'f', 1).arg(10.0, 0, 'f', 1)));
+        QString("%1x%2x%3").arg(size.x(), 0, 'f', 1).arg(size.y(), 0, 'f', 1).arg(size.z(), 0, 'f', 1)));
 
-    // 体积 - 暂时使用固定值，后续根据SceneObject扩展
-    m_modelTable->setItem(row, 2, new QTableWidgetItem(QString("%1 cm³").arg(1.0, 0, 'f', 2)));
+    // 体积
+    double volume = obj->metadata().volume;
+    m_modelTable->setItem(row, 2, new QTableWidgetItem(QString("%1 cm³").arg(volume / 1000.0, 0, 'f', 2)));
 
-    // 重量 - 暂时使用固定值，后续根据SceneObject扩展
-    m_modelTable->setItem(row, 3, new QTableWidgetItem(QString("%1 g").arg(1.0, 0, 'f', 2)));
+    // 重量
+    double weight = obj->metadata().weight;
+    m_modelTable->setItem(row, 3, new QTableWidgetItem(QString("%1 g").arg(weight, 0, 'f', 2)));
 
-    // 打印时间 - 暂时使用固定值，后续根据SceneObject扩展
-    m_modelTable->setItem(row, 4, new QTableWidgetItem(QString("%1h %2m").arg(1).arg(0)));
+    // 打印时间 - 简化计算（基于体积和层高）
+    double layerHeight = m_layerHeightSpinBox ? m_layerHeightSpinBox->value() : 0.1;
+    double estimatedTime = 0.0;
+    if (volume > 0.0 && layerHeight > 0.0)
+    {
+      estimatedTime = (volume / 1000.0) / (layerHeight * 100.0) * 60.0; // 简化估算
+    }
+    int hours = static_cast<int>(estimatedTime) / 3600;
+    int minutes = (static_cast<int>(estimatedTime) % 3600) / 60;
+    m_modelTable->setItem(row, 4, new QTableWidgetItem(QString("%1h %2m").arg(hours).arg(minutes)));
 
     row++;
   }
@@ -935,20 +953,28 @@ void PlaterWidget::updateModelInfo()
   int modelCount = m_sceneManager->rootObjects().count();
   m_modelCountLabel->setText(QString("模型数量: %1").arg(modelCount));
 
-  // 计算总重量和总打印时间 - 暂时使用固定值
+  // 计算总重量和总打印时间
   double totalWeight = 0.0;
   double totalTime = 0.0;
 
   for (auto obj : m_sceneManager->rootObjects())
   {
-    totalWeight += 1.0; // 暂时使用固定值
-    totalTime += 3600;  // 暂时使用固定值
+    totalWeight += obj->metadata().weight;
+    double volume = obj->metadata().volume;
+    double layerHeight = m_layerHeightSpinBox ? m_layerHeightSpinBox->value() : 0.1;
+    if (volume > 0.0 && layerHeight > 0.0)
+    {
+      totalTime += (volume / 1000.0) / (layerHeight * 100.0) * 60.0;
+    }
   }
 
   m_materialUsageLabel->setText(QString("材料用量: %1g").arg(totalWeight, 0, 'f', 2));
+  
+  int totalHours = static_cast<int>(totalTime) / 3600;
+  int totalMinutes = (static_cast<int>(totalTime) % 3600) / 60;
   m_printTimeLabel->setText(QString("预估时间: %1h %2m")
-                              .arg(static_cast<int>(totalTime) / 3600)
-                              .arg((static_cast<int>(totalTime) % 3600) / 60));
+                              .arg(totalHours)
+                              .arg(totalMinutes));
 }
 
 // 实现公共槽函数
@@ -957,45 +983,61 @@ void PlaterWidget::addModel()
   QString fileName =
     QFileDialog::getOpenFileName(this, "添加3D模型", "", FileImporter::getFileFilter());
 
-  if (!fileName.isEmpty())
+  if (fileName.isEmpty())
   {
-    // 创建文件导入器
-    FileImporter importer;
+    return;
+  }
 
-    // 显示导入选项对话框
-    ImportOptions options = FileImporter::showImportOptionsDialog(fileName, this);
+  // 显示进度提示
+  m_statusLabel->setText("正在导入模型...");
+  QApplication::processEvents();
 
-    // 导入文件
-    ImportResult result = importer.importFile(fileName, options);
+  // 创建文件导入器
+  FileImporter importer;
 
-    if (result.success)
+  // 显示导入选项对话框
+  ImportOptions options = FileImporter::showImportOptionsDialog(fileName, this);
+
+  // 导入文件
+  ImportResult result = importer.importFile(fileName, options);
+
+  if (result.success)
+  {
+    // 创建场景对象
+    SceneObjectV2* obj = new SceneObjectV2(QFileInfo(fileName).baseName(), result.actor);
+
+    obj->setPolyData(result.polyData);
+
+    // 设置元数据
+    ObjectMetadata metadata;
+    metadata.meshInfo = result.meshInfo;
+    metadata.volume = result.volume;
+    metadata.weight = result.weight;
+    metadata.fileSize = result.fileSize;
+    metadata.importTime = QDateTime::currentDateTime();
+    metadata.lastModified = QDateTime::currentDateTime();
+    obj->setMetadata(metadata);
+
+    // 添加到场景管理器
+    m_sceneManager->addObject(obj);
+
+    // 触发渲染窗口更新
+    if (m_renderWindow)
     {
-      // 创建场景对象
-      SceneObjectV2* obj = new SceneObjectV2(QFileInfo(fileName).baseName(), result.actor);
-
-      obj->setPolyData(result.polyData);
-
-      // 设置元数据
-      ObjectMetadata metadata;
-      metadata.meshInfo = result.meshInfo;
-      metadata.volume = result.volume;
-      metadata.weight = result.weight;
-      metadata.fileSize = result.fileSize;
-      metadata.importTime = QDateTime::currentDateTime();
-      metadata.lastModified = QDateTime::currentDateTime();
-      obj->setMetadata(metadata);
-
-      // 添加到场景管理器
-      m_sceneManager->addObject(obj);
-
-      m_statusLabel->setText("成功加载模型: " + QFileInfo(fileName).fileName());
-      emit modelAdded();
+      m_renderWindow->Render();
     }
-    else
-    {
-      QMessageBox::critical(this, "导入错误", result.errorMessage);
-      m_statusLabel->setText("导入失败: " + result.errorMessage);
-    }
+
+    // 更新UI
+    updateUI();
+    updateModelInfo();
+
+    m_statusLabel->setText("成功加载模型: " + QFileInfo(fileName).fileName());
+    // emit modelAdded();
+  }
+  else
+  {
+    QMessageBox::critical(this, "导入错误", result.errorMessage);
+    m_statusLabel->setText("导入失败: " + result.errorMessage);
   }
 }
 
@@ -1003,6 +1045,17 @@ void PlaterWidget::removeSelectedModels()
 {
   auto selectedObjects = m_sceneManager->selectedObjects();
   m_sceneManager->removeObjects(selectedObjects);
+  
+  // 触发渲染窗口更新
+  if (m_renderWindow)
+  {
+    m_renderWindow->Render();
+  }
+  
+  // 更新UI
+  updateUI();
+  updateModelInfo();
+  
   emit modelRemoved();
 }
 
@@ -1024,8 +1077,20 @@ void PlaterWidget::duplicateSelectedModels()
 
   if (!selectedObjects.isEmpty())
   {
+    // 触发渲染窗口更新
+    if (m_renderWindow)
+    {
+      m_renderWindow->Render();
+    }
+    
+    // 更新UI
+    updateUI();
+    updateModelInfo();
+    
     m_statusLabel->setText(QString("复制了 %1 个模型").arg(selectedObjects.size()));
-    emit modelAdded();
+
+    // open dialog after 
+    // emit modelAdded();
   }
 }
 

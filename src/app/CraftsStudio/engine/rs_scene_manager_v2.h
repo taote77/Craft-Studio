@@ -56,6 +56,10 @@ public:
     return m_selectedObjects.isEmpty() ? nullptr : m_selectedObjects.first();
   }
 
+  // 获取渲染器
+  vtkSmartPointer<vtkRenderer> renderer() const { return m_renderer; }
+  void setRenderer(vtkSmartPointer<vtkRenderer> renderer);
+
   // 获取当前变换模式
   TransformModeV2 getTransformMode() const { return m_transformMode; }
 
@@ -180,6 +184,8 @@ private:
   ViewType m_viewType = ViewType::Perspective;
   BuildPlatformParameters m_buildPlatform; // 构建平台参数
   bool m_multiSelectionEnabled = true;     // 是否启用多选
+
+  vtkSmartPointer<vtkRenderer> m_renderer; // VTK渲染器引用
 };
 
 #endif // RS_SCENE_MANAGER_V2_H
