@@ -59,8 +59,9 @@ public:
   // 设置渲染器
   void SetRenderer(vtkSmartPointer<vtkRenderer> renderer);
 
-  // 设置场景管理器
+  // 设置场景管理器 (supports both legacy and new SceneDocument)
   void SetSceneManager(SceneManagerV2* manager);
+  void SetSceneDocument(void* doc); // csengine::SceneDocument* (void* to avoid header dep)
 
   // 设置变换操纵器
   void SetTransformGizmo(TransformGizmo* gizmo);
@@ -174,6 +175,7 @@ private:
 
   // 场景管理
   SceneManagerV2* m_sceneManager = nullptr;
+  void* _sceneDocument = nullptr; // csengine::SceneDocument* (void* to avoid header dep)
   TransformGizmo* m_transformGizmo = nullptr;
 
   // 交互状态

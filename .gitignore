@@ -1,7 +1,25 @@
 .cache
 build
 CMakeLists.txt.user
-.vscode
 src/app/.trash
 __pycache__
 .trae
+
+# Editor
+.idea/
+*.swp
+*.swo
+*~
+
+# CMake generated
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+*.ninja
+.ninja_deps
+.ninja_log
+
+# OS
+.DS_Store
+Thumbs.db

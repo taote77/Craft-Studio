@@ -1,5 +1,4 @@
 #include "action_factory.h"
-#include "engine/rs_scene_manager.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -226,10 +225,8 @@ void ActionFactory::openSTLFile()
   auto actor = vtkSmartPointer<vtkActor>::New();
   actor->SetMapper(mapper);
 
-  auto manager = SceneManager::getInstance();
-
   QFileInfo finfo(path);
-  manager->addObject(new SceneObject(finfo.fileName(), actor));
+  // Legacy SceneManager removed — model management via SceneDocument in PlaterWidget
 
   auto renderer = _vtkRenderWindow->GetRenderers()->GetFirstRenderer();
   if (!renderer)

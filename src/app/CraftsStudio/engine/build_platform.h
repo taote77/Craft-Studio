@@ -10,8 +10,10 @@
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 #include <vtkActor2D.h>
-#include <vtkTextProperty.h>
 #include <vtkCaptionActor2D.h>
+#include <vtkTextProperty.h>
+
+#include <vector>
 
 // 构建平台类，负责显示和管理3D打印构建平台
 class BuildPlatform : public QObject
@@ -136,6 +138,10 @@ private:
   vtkSmartPointer<vtkActor> m_gridActor;     // 网格Actor
   vtkSmartPointer<vtkActor> m_axisActor;      // 坐标轴Actor
   vtkSmartPointer<vtkActor2D> m_rulerActor;   // 标尺Actor
+
+  // Ruler sub-components
+  vtkSmartPointer<vtkActor> m_rulerTickActor;               // 标尺刻度线
+  std::vector<vtkSmartPointer<vtkCaptionActor2D>> m_rulerLabels; // 标尺文字标签
   
   // VTK数据
   vtkSmartPointer<vtkPolyData> m_platformPolyData; // 平台几何数据

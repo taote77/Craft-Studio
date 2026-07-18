@@ -1,0 +1,104 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug CraftsStudio",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/output/bin/Debug/CraftsStudio",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "${workspaceFolder}/build/output/lib/Debug:${env:LD_LIBRARY_PATH}"
+                },
+                {
+                    "name": "QBUS_PLUGIN_PATH",
+                    "value": "${workspaceFolder}/build/output/plugin/Debug"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Debug Backend",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/output/bin/Debug/Backend",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "${workspaceFolder}/build/output/lib/Debug:${env:LD_LIBRARY_PATH}"
+                },
+                {
+                    "name": "QBUS_PLUGIN_PATH",
+                    "value": "${workspaceFolder}/build/output/plugin/Debug"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Debug clipper_app",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/output/bin/Debug/clipper_app",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Attach to CraftsStudio",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/output/bin/Debug/CraftsStudio",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

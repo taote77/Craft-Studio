@@ -3,7 +3,9 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDialog>
+#include <QFile>
 #include <QVBoxLayout>
+#include <QXmlStreamReader>
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -667,22 +669,113 @@ ImportResult FileImporter::importPLY(const QString& fileName, const ImportOption
 ImportResult FileImporter::import3MF(const QString& fileName, const ImportOptions& options)
 {
   ImportResult result;
-  
-  // TODO: 实现3MF导入
+
+  // 3MF requires lib3mf (ZIP + OPC packaging). Not yet linked.
   result.success = false;
-  result.errorMessage = "3MF导入暂未实现";
-  
+  result.errorMessage = "3MF import requires lib3mf (not yet available). Use STL/OBJ/AMF instead.";
+  Q_UNUSED(fileName); Q_UNUSED(options);
+
   return result;
 }
 
 ImportResult FileImporter::importAMF(const QString& fileName, const ImportOptions& options)
 {
   ImportResult result;
-  
-  // TODO: 实现AMF导入
-  result.success = false;
-  result.errorMessage = "AMF导入暂未实现";
-  
+
+  QFile file(fileName);
+  if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+  {
+    result.success = false;
+    result.errorMessage = "Cannot open AMF file: " + fileName;
+    return result;
+  }
+
+  QXmlStreamReader xml(&file);
+
+  struct Vec3 { double x=0, y=0, z=0; };
+  std::vector<Vec3> vertices;
+  std::vector<std::array<int,3>> triangles;
+
+  while (!xml.atEnd() && !xml.hasError())
+  {
+    xml.readNext();
+    if (xml.isStartElement())
+    {
+      if (xml.name() == QStringLiteral("coordinates"))
+      {
+        Vec3 v;
+        while (!(xml.isEndElement() && xml.name() == QStringLiteral("coordinates")))
+        {
+          xml.readNext();
+          if (xml.isStartElement())
+          {
+            if (xml.name() == QStringLiteral("x")) v.x = xml.readElementText().toDouble();
+            if (xml.name() == QStringLiteral("y")) v.y = xml.readElementText().toDouble();
+            if (xml.name() == QStringLiteral("z")) v.z = xml.readElementText().toDouble();
+          }
+        }
+        vertices.push_back(v);
+      }
+      if (xml.name() == QStringLiteral("triangle"))
+      {
+        std::array<int,3> tri = {0,0,0};
+        while (!(xml.isEndElement() && xml.name() == QStringLiteral("triangle")))
+        {
+          xml.readNext();
+          if (xml.isStartElement())
+          {
+            if (xml.name() == QStringLiteral("v1")) tri[0] = xml.readElementText().toInt();
+            if (xml.name() == QStringLiteral("v2")) tri[1] = xml.readElementText().toInt();
+            if (xml.name() == QStringLiteral("v3")) tri[2] = xml.readElementText().toInt();
+          }
+        }
+        triangles.push_back(tri);
+      }
+    }
+  }
+
+  file.close();
+
+  if (xml.hasError() || vertices.empty())
+  {
+    result.success = false;
+    result.errorMessage = "Failed to parse AMF: " + xml.errorString();
+    return result;
+  }
+
+  // Build VTK polydata
+  vtkNew<vtkPoints> pts;
+  for (const auto& v : vertices)
+    pts->InsertNextPoint(v.x, v.y, v.z);
+
+  vtkNew<vtkCellArray> cells;
+  for (const auto& t : triangles)
+  {
+    cells->InsertNextCell(3);
+    cells->InsertCellPoint(t[0]);
+    cells->InsertCellPoint(t[1]);
+    cells->InsertCellPoint(t[2]);
+  }
+
+  vtkNew<vtkPolyData> rawPoly;
+  rawPoly->SetPoints(pts);
+  rawPoly->SetPolys(cells);
+
+  result.originalVertices = static_cast<int>(vertices.size());
+  result.originalTriangles = static_cast<int>(triangles.size());
+
+  vtkSmartPointer<vtkPolyData> processed = preprocessModel(rawPoly, options);
+  processed = applyTransform(processed, options);
+  processed = postprocessModel(processed, options);
+
+  result.finalVertices = processed->GetNumberOfPoints();
+  result.finalTriangles = processed->GetNumberOfPolys();
+  calculateMeshInfo(processed, result.meshInfo, result.volume);
+  result.weight = result.volume * 1.24 * 0.000001;
+  result.actor = createActor(processed);
+  result.polyData = processed;
+  result.success = true;
+
   return result;
 }
 

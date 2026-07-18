@@ -39,16 +39,14 @@ find_package(QT NAMES Qt6 Qt5 COMPONENTS
     Network
     Qml
     Quick
-    SerialBus
     SerialPort
     Sql
-    WebChannel
     WebSockets
     Widgets
     Xml REQUIRED
 )
 
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS 
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS
     Concurrent
     DBus
     Gui
@@ -56,10 +54,8 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS
     Network
     Qml
     Quick
-    SerialBus
     SerialPort
     Sql
-    WebChannel
     WebSockets
     Widgets
     Xml REQUIRED
@@ -76,13 +72,10 @@ target_link_libraries( ${PROJECT_NAME} PUBLIC
     Qt${QT_VERSION_MAJOR}::Network
     Qt${QT_VERSION_MAJOR}::Qml
     Qt${QT_VERSION_MAJOR}::Quick
-    Qt${QT_VERSION_MAJOR}::SerialBus
     Qt${QT_VERSION_MAJOR}::SerialPort
     Qt${QT_VERSION_MAJOR}::Sql
-    Qt${QT_VERSION_MAJOR}::WebChannel
-    Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::Xml
     Qt${QT_VERSION_MAJOR}::WebSockets
+    Qt${QT_VERSION_MAJOR}::Xml
 )
 
 

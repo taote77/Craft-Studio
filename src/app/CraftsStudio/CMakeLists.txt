@@ -12,8 +12,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Gui Quick LinguistTools REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Gui Quick LinguistTools REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets Gui Quick Quick3D QuickWidgets LinguistTools REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Gui Quick Quick3D QuickWidgets LinguistTools REQUIRED)
 
 # set(TS_FILES cv-app_zh_CN.ts)
 
@@ -32,12 +32,14 @@ add_executable(${PROJECT_NAME}
   engine/rs_interactor_trackball_camera.cc
   engine/rs_interactor_v2.h
   engine/rs_interactor_v2.cc
+  # Legacy V1 (trackball camera still references)
   engine/rs_scene_object.h
   engine/rs_scene_object.cc
-  engine/rs_scene_object_v2.h
-  engine/rs_scene_object_v2.cc
   engine/rs_scene_manager.h
   engine/rs_scene_manager.cc
+  # Legacy V2 (RSInteractorV2 still depends on SceneManagerV2)
+  engine/rs_scene_object_v2.h
+  engine/rs_scene_object_v2.cc
   engine/rs_scene_manager_v2.h
   engine/rs_scene_manager_v2.cc
   engine/rs_transform_gizmo.h
@@ -48,8 +50,11 @@ add_executable(${PROJECT_NAME}
   engine/file_importer.cc
   ui/mainwindow.h
   ui/mainwindow.cc
-  ui/menu_manager.h
-  ui/menu_manager.cc
+  ui/menu_controller.h
+  ui/menu_controller.cc
+  ui/slice_preview_bridge.h
+  ui/slice_preview_bridge.cpp
+  # menu_manager + action_factory replaced by MenuController
   ui/project_tree.h
   ui/project_tree.cc
   ui/model_manager.h
@@ -60,8 +65,7 @@ add_executable(${PROJECT_NAME}
   ui/transform_panel.cc
   ui/plater_widget.h
   ui/plater_widget.cc
-  action_factory.h
-  action_factory.cc
+  # action_factory replaced by MenuController + SceneDocument
   ${RESOURCES}
 )
 
@@ -72,8 +76,13 @@ add_executable(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} PRIVATE
   Qt${QT_VERSION_MAJOR}::Core
   Qt${QT_VERSION_MAJOR}::Quick
+  Qt${QT_VERSION_MAJOR}::Quick3D
+  Qt${QT_VERSION_MAJOR}::QuickWidgets
   Qt${QT_VERSION_MAJOR}::Widgets
   Qt${QT_VERSION_MAJOR}::Gui
+  slicingcore
+  csengine
+  csbridge
 )
 
 # qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})

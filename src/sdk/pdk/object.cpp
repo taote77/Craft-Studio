@@ -219,7 +219,7 @@ QVariant Object::Invoke(const int& topic, const QVariant& data)
   msg.topic = QString::number(topic);
   msg.data = data;
   msg.from = Path();
-  msg.feedback = false;
+  msg.feedback.clear();
   msg.type = Message::DangerSync;
 
   return emit sendInvoke(msg);
@@ -343,7 +343,7 @@ void Object::HandleBlockRequest(const Message& msg, QWeakPointer<MsgPromise> pro
   reply.topic = msg.feedback;
   reply.data = data;
   reply.from = Path();
-  reply.feedback = true;
+  reply.feedback = msg.topic;
 
   using namespace std::chrono_literals;
   // if(mutex_promli_.try_lock_for(600ms))

@@ -12,15 +12,16 @@
 #include <QWidget>
 #include <qobjectdefs.h>
 
-#include "engine/rs_scene_manager.h"
+namespace slicing { class ModelObject; }
+namespace csengine { class SceneDocument; }
 
 // 编辑模式枚举
 enum class EditMode
 {
-  None,      // 无模式
-  Translate, // 移动模式
-  Rotate,    // 旋转模式
-  Scale      // 缩放模式
+  None,
+  Translate,
+  Rotate,
+  Scale
 };
 
 class EditModeManager : public QObject
@@ -28,30 +29,20 @@ class EditModeManager : public QObject
   Q_OBJECT
 public:
   explicit EditModeManager(QObject* parent = nullptr);
-
-  // 初始化模式按钮
   void initButtons(QToolButton* translateBtn, QToolButton* rotateBtn, QToolButton* scaleBtn);
-
-  // 设置当前模式
   void setCurrentMode(EditMode mode);
-
-  // 获取当前模式
   EditMode currentMode() const { return _current_mode; }
-
-  // 取消所有模式选择
   void clearSelection();
 
 signals:
-  // 模式改变信号
   void modeChanged(EditMode newMode);
 
 private slots:
-  // 按钮点击处理
   void onButtonClicked(int id);
 
 private:
-  EditMode _current_mode;      // 当前模式
-  QButtonGroup* _button_group; // 按钮组
+  EditMode _current_mode = EditMode::None;
+  QButtonGroup* _button_group = nullptr;
 };
 
 class TransformPanel : public QWidget
@@ -60,61 +51,52 @@ class TransformPanel : public QWidget
 
 public:
   explicit TransformPanel(QWidget* parent = nullptr);
-  
-  // 设置场景管理器
-  void setSceneManager(SceneManager* manager);
-  
-  // 更新选中对象信息
-  void updateSelection(SceneObject* selectedObject);
+
+  // Set scene document (replaces old SceneManager)
+  void setSceneDocument(csengine::SceneDocument* doc);
+
+  // Update selected object info
+  void updateSelection(slicing::ModelObject* selectedObject);
 
 signals:
   void modeChanged(EditMode newMode);
   void transformApplied();
 
 public slots:
-  // 处理变换操作
   void onTranslationChanged();
   void onRotationChanged();
   void onScaleChanged();
 
 private slots:
-  // 处理场景管理器信号
-  void onSelectionChanged(SceneObject* selectedObject);
-  void onTransformModeChanged(TransformMode mode);
+  void onSelectionChanged();
+  void onTransformModeChanged(int mode);
 
 private:
-  QVBoxLayout* layout;
-  
-  // 场景管理器
-  SceneManager* m_sceneManager = nullptr;
-  
-  // 模式管理
+  QVBoxLayout* layout = nullptr;
+  csengine::SceneDocument* _sceneDocument = nullptr;
+
   EditModeManager* _editmode_mgr;
   QToolButton* _move_button;
   QToolButton* _rotate_button;
   QToolButton* _scale_button;
   QPushButton* _clear_button;
-  
-  // 变换数值输入
+
   QLabel* m_positionLabel;
   QLineEdit* m_positionXEdit;
   QLineEdit* m_positionYEdit;
   QLineEdit* m_positionZEdit;
-  
+
   QLabel* m_rotationLabel;
   QLineEdit* m_rotationXEdit;
   QLineEdit* m_rotationYEdit;
   QLineEdit* m_rotationZEdit;
-  
+
   QLabel* m_scaleLabel;
   QLineEdit* m_scaleXEdit;
   QLineEdit* m_scaleYEdit;
   QLineEdit* m_scaleZEdit;
-  
-  // 当前选中的对象
-  SceneObject* m_currentObject = nullptr;
-  
-  // 防止递归更新
+
+  slicing::ModelObject* m_currentObject = nullptr;
   bool m_updating = false;
 
   void setupUI();

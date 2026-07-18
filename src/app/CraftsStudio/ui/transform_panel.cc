@@ -1,4 +1,6 @@
 #include "transform_panel.h"
+#include <csengine/scene/scene_document.hpp>
+#include <slicingcore/mesh/model_object.hpp>
 #include <QDebug>
 #include <QHBoxLayout>
 #include <qglobal.h>
@@ -256,21 +258,18 @@ void TransformPanel::createTransformInputs()
   enableTransformControls(false);
 }
 
-void TransformPanel::setSceneManager(SceneManager* manager)
+void TransformPanel::setSceneDocument(csengine::SceneDocument* doc)
 {
-  m_sceneManager = manager;
-  
-  if (m_sceneManager)
+  _sceneDocument = doc;
+
+  if (_sceneDocument)
   {
-    // 连接场景管理器信号
-    connect(m_sceneManager, &SceneManager::selectionChanged, 
+    connect(_sceneDocument, &csengine::SceneDocument::selectionChanged,
             this, &TransformPanel::onSelectionChanged);
-    connect(m_sceneManager, &SceneManager::transformModeChanged,
-            this, &TransformPanel::onTransformModeChanged);
   }
 }
 
-void TransformPanel::updateSelection(SceneObject* selectedObject)
+void TransformPanel::updateSelection(slicing::ModelObject* selectedObject)
 {
   m_currentObject = selectedObject;
   updateTransformControls();
@@ -278,7 +277,7 @@ void TransformPanel::updateSelection(SceneObject* selectedObject)
 
 void TransformPanel::onTranslationChanged()
 {
-  if (m_updating || !m_currentObject || !m_sceneManager)
+  if (m_updating || !m_currentObject || !_sceneDocument)
     return;
 
   m_updating = true;
@@ -289,7 +288,7 @@ void TransformPanel::onTranslationChanged()
   double z = m_positionZEdit->text().toDouble();
   
   // 应用变换到当前对象
-  m_sceneManager->setObjectTranslation(m_currentObject, x, y, z);
+  _sceneDocument->translate({m_currentObject}, x, y, z);
   
   m_updating = false;
   emit transformApplied();
@@ -297,7 +296,7 @@ void TransformPanel::onTranslationChanged()
 
 void TransformPanel::onRotationChanged()
 {
-  if (m_updating || !m_currentObject || !m_sceneManager)
+  if (m_updating || !m_currentObject || !_sceneDocument)
     return;
 
   m_updating = true;
@@ -308,7 +307,7 @@ void TransformPanel::onRotationChanged()
   double z = m_rotationZEdit->text().toDouble();
   
   // 应用旋转到当前对象
-  m_sceneManager->setObjectRotation(m_currentObject, x, y, z);
+  _sceneDocument->rotate({m_currentObject}, x, y, z);
   
   m_updating = false;
   emit transformApplied();
@@ -316,7 +315,7 @@ void TransformPanel::onRotationChanged()
 
 void TransformPanel::onScaleChanged()
 {
-  if (m_updating || !m_currentObject || !m_sceneManager)
+  if (m_updating || !m_currentObject || !_sceneDocument)
     return;
 
   m_updating = true;
@@ -327,18 +326,20 @@ void TransformPanel::onScaleChanged()
   double z = m_scaleZEdit->text().toDouble();
   
   // 应用缩放到当前对象
-  m_sceneManager->setObjectScale(m_currentObject, x, y, z);
+  _sceneDocument->scale({m_currentObject}, x, y, z);
   
   m_updating = false;
   emit transformApplied();
 }
 
-void TransformPanel::onSelectionChanged(SceneObject* selectedObject)
+void TransformPanel::onSelectionChanged()
 {
-  updateSelection(selectedObject);
+  // Update from the first selected object (TODO: wire properly when used)
+  if (_sceneDocument && !_sceneDocument->selection().isEmpty())
+    updateSelection(_sceneDocument->selection().first());
 }
 
-void TransformPanel::onTransformModeChanged(TransformMode mode)
+void TransformPanel::onTransformModeChanged(int mode)
 {
   // 根据变换模式更新UI状态
   // 这里可以根据需要实现模式切换的逻辑
@@ -353,22 +354,20 @@ void TransformPanel::updateTransformControls()
   }
 
   enableTransformControls(true);
-  
-  // 获取对象的变换信息并更新输入框
-  // 这里需要根据SceneObject的具体实现来获取变换信息
-  
-  // 暂时设置为默认值
-  m_positionXEdit->setText("0.0");
-  m_positionYEdit->setText("0.0");
-  m_positionZEdit->setText("0.0");
-  
-  m_rotationXEdit->setText("0.0");
-  m_rotationYEdit->setText("0.0");
-  m_rotationZEdit->setText("0.0");
-  
-  m_scaleXEdit->setText("1.0");
-  m_scaleYEdit->setText("1.0");
-  m_scaleZEdit->setText("1.0");
+
+  // Read from ModelObject placement
+  const auto& p = m_currentObject->placement();
+  m_positionXEdit->setText(QString::number(p.posX, 'f', 2));
+  m_positionYEdit->setText(QString::number(p.posY, 'f', 2));
+  m_positionZEdit->setText(QString::number(p.posZ, 'f', 2));
+
+  m_rotationXEdit->setText(QString::number(p.rotX, 'f', 2));
+  m_rotationYEdit->setText(QString::number(p.rotY, 'f', 2));
+  m_rotationZEdit->setText(QString::number(p.rotZ, 'f', 2));
+
+  m_scaleXEdit->setText(QString::number(p.scaleX, 'f', 2));
+  m_scaleYEdit->setText(QString::number(p.scaleY, 'f', 2));
+  m_scaleZEdit->setText(QString::number(p.scaleZ, 'f', 2));
 }
 
 void TransformPanel::enableTransformControls(bool enabled)

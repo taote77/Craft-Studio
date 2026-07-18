@@ -4,6 +4,10 @@
 #include "rs_scene_object_v2.h"
 #include "rs_transform_gizmo.h"
 
+#include <csengine/scene/scene_document.hpp>
+
+#include <limits>
+
 #include <vtkCamera.h>
 #include <vtkCoordinate.h>
 #include <vtkMath.h>
@@ -61,6 +65,63 @@ void RSInteractorV2::SetSceneManager(SceneManagerV2* manager)
   m_sceneManager = manager;
 }
 
+void RSInteractorV2::SetSceneDocument(void* doc)
+{
+  _sceneDocument = doc;
+}
+
+// Helper: compute scene bounds from SceneDocument objects
+static void computeSceneBounds(csengine::SceneDocument* doc, double bounds[6])
+{
+  if (!doc || doc->objects().isEmpty())
+  {
+    bounds[0] = bounds[2] = bounds[4] = -50.0;
+    bounds[1] = bounds[3] = bounds[5] = 50.0;
+    return;
+  }
+
+  bounds[0] = bounds[2] = bounds[4] = std::numeric_limits<double>::max();
+  bounds[1] = bounds[3] = bounds[5] = std::numeric_limits<double>::lowest();
+
+  for (auto* obj : doc->objects())
+  {
+    double minX, minY, minZ, maxX, maxY, maxZ;
+    obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+    bounds[0] = qMin(bounds[0], minX);
+    bounds[1] = qMax(bounds[1], maxX);
+    bounds[2] = qMin(bounds[2], minY);
+    bounds[3] = qMax(bounds[3], maxY);
+    bounds[4] = qMin(bounds[4], minZ);
+    bounds[5] = qMax(bounds[5], maxZ);
+  }
+}
+
+// Helper: compute bounds from selected objects
+static void computeSelectedBounds(csengine::SceneDocument* doc, double bounds[6])
+{
+  auto sel = doc->selection();
+  if (sel.isEmpty())
+  {
+    computeSceneBounds(doc, bounds);
+    return;
+  }
+
+  bounds[0] = bounds[2] = bounds[4] = std::numeric_limits<double>::max();
+  bounds[1] = bounds[3] = bounds[5] = std::numeric_limits<double>::lowest();
+
+  for (auto* obj : sel)
+  {
+    double minX, minY, minZ, maxX, maxY, maxZ;
+    obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+    bounds[0] = qMin(bounds[0], minX);
+    bounds[1] = qMax(bounds[1], maxX);
+    bounds[2] = qMin(bounds[2], minY);
+    bounds[3] = qMax(bounds[3], maxY);
+    bounds[4] = qMin(bounds[4], minZ);
+    bounds[5] = qMax(bounds[5], maxZ);
+  }
+}
+
 void RSInteractorV2::SetTransformGizmo(TransformGizmo* gizmo)
 {
   m_transformGizmo = gizmo;
@@ -115,9 +176,14 @@ void RSInteractorV2::SetViewType(ViewType type)
 
   // 获取所有对象的边界
   double bounds[6];
+  auto* sd = static_cast<csengine::SceneDocument*>(_sceneDocument);
   if (m_sceneManager)
   {
     m_sceneManager->getSceneBounds(bounds);
+  }
+  else if (sd)
+  {
+    computeSceneBounds(sd, bounds);
   }
   else
   {
@@ -211,9 +277,14 @@ void RSInteractorV2::FitAll()
 
   // 获取所有对象的边界
   double bounds[6];
+  auto* sd = static_cast<csengine::SceneDocument*>(_sceneDocument);
   if (m_sceneManager)
   {
     m_sceneManager->getSceneBounds(bounds);
+  }
+  else if (sd)
+  {
+    computeSceneBounds(sd, bounds);
   }
   else
   {
@@ -245,9 +316,14 @@ void RSInteractorV2::FitSelected()
 
   // 获取选中对象的边界
   double bounds[6];
+  auto* sd = static_cast<csengine::SceneDocument*>(_sceneDocument);
   if (m_sceneManager && !m_sceneManager->selectedObjects().isEmpty())
   {
     m_sceneManager->getSelectedObjectsBounds(bounds);
+  }
+  else if (sd && !sd->selection().isEmpty())
+  {
+    computeSelectedBounds(sd, bounds);
   }
   else
   {
@@ -513,14 +589,15 @@ void RSInteractorV2::OnKeyPress()
   const char* key = this->Interactor->GetKeySym();
 
   // 处理快捷键
+  auto* sd = static_cast<csengine::SceneDocument*>(_sceneDocument);
   if (strcmp(key, "Escape") == 0)
   {
     // ESC键取消当前操作
     SetInteractionMode(InteractionMode::Camera);
     if (m_sceneManager)
-    {
       m_sceneManager->clearSelection();
-    }
+    else if (sd)
+      sd->clearSelection();
   }
   else if (strcmp(key, "Delete") == 0)
   {
@@ -530,14 +607,18 @@ void RSInteractorV2::OnKeyPress()
       auto selectedObjects = m_sceneManager->selectedObjects();
       m_sceneManager->removeObjects(selectedObjects);
     }
+    else if (sd)
+    {
+      sd->removeModels(sd->selection());
+    }
   }
   else if (strcmp(key, "a") == 0 || strcmp(key, "A") == 0)
   {
     // 全选
     if (m_sceneManager)
-    {
       m_sceneManager->selectAll();
-    }
+    else if (sd)
+      sd->selectAll();
   }
   else if (strcmp(key, "1") == 0)
   {
@@ -668,21 +749,28 @@ void RSInteractorV2::UpdateSelection()
 
 void RSInteractorV2::EndSelection()
 {
-  if (!m_sceneManager)
-    return;
+  auto* sd = static_cast<csengine::SceneDocument*>(_sceneDocument);
 
   // 如果选择框很小，则执行点选
   if (m_selectionRect.width() < 5 && m_selectionRect.height() < 5)
   {
     vtkProp3D* actor = PickActor(m_currentMousePos[0], m_currentMousePos[1]);
+    bool addToSelection = IsModifierKeyPressed(ControlKey);
+
     if (actor)
     {
-      SceneObjectV2* obj = m_sceneManager->findObjectByActor(vtkActor::SafeDownCast(actor));
-      if (obj)
+      // Try SceneManagerV2 first
+      if (m_sceneManager)
       {
-        // 判断是否添加到多选
-        bool addToSelection = IsModifierKeyPressed(ControlKey);
-        m_sceneManager->setObjectSelected(obj, true, addToSelection);
+        SceneObjectV2* obj = m_sceneManager->findObjectByActor(vtkActor::SafeDownCast(actor));
+        if (obj)
+          m_sceneManager->setObjectSelected(obj, true, addToSelection);
+      }
+      else if (sd)
+      {
+        auto* obj = sd->findObjectByActor(vtkActor::SafeDownCast(actor));
+        if (obj)
+          sd->setSelected(obj, addToSelection);
       }
     }
     else
@@ -690,21 +778,66 @@ void RSInteractorV2::EndSelection()
       // 点击空白区域，清除选择
       if (!IsModifierKeyPressed(ShiftKey))
       {
-        m_sceneManager->clearSelection();
+        if (m_sceneManager)
+          m_sceneManager->clearSelection();
+        else if (sd)
+          sd->clearSelection();
       }
     }
   }
   else
   {
     // 执行框选
-    m_sceneManager->selectObjectsInRect(m_selectionRect);
+    if (m_sceneManager)
+    {
+      m_sceneManager->selectObjectsInRect(m_selectionRect);
+    }
+    else if (sd)
+    {
+      // Box-select: select objects whose world XY bounds intersect the screen-space rect
+      sd->clearSelection();
+      for (auto* obj : sd->objects())
+      {
+        double minX, minY, minZ, maxX, maxY, maxZ;
+        obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+        // Project world corners to screen and check rect intersection (simplified:
+        // use bounding box center for hit test)
+        double cx = (minX + maxX) / 2.0, cy = (minY + maxY) / 2.0, cz = (minZ + maxZ) / 2.0;
+        // Crude screen-space test using world XY vs mouse drag rect
+        // In practice this needs proper world-to-screen projection; for now,
+        // select objects whose center falls within the selection rect in world XY
+        (void)cz;
+        // Map world center to screen via VTK coordinate transform
+        if (m_renderer)
+        {
+          double worldPos[3] = { cx, cy, cz };
+          double displayPos[3];
+          vtkSmartPointer<vtkCoordinate> coord = vtkSmartPointer<vtkCoordinate>::New();
+          coord->SetCoordinateSystemToWorld();
+          coord->SetValue(worldPos);
+          double* screen = coord->GetComputedDoubleDisplayValue(m_renderer);
+          displayPos[0] = screen[0];
+          displayPos[1] = screen[1];
+          screen[0] = 0; // vtkCoordinate returns a thread-local buffer; just read the values
+
+          if (displayPos[0] >= m_selectionRect.left() &&
+              displayPos[0] <= m_selectionRect.right() &&
+              displayPos[1] >= m_selectionRect.top() &&
+              displayPos[1] <= m_selectionRect.bottom())
+          {
+            sd->addToSelection(obj);
+          }
+        }
+      }
+    }
   }
 }
 
 void RSInteractorV2::StartTransform()
 {
-  if (!m_transformGizmo || !m_sceneManager)
+  if (!m_sceneManager && !_sceneDocument)
     return;
+  auto* sd = static_cast<csengine::SceneDocument*>(_sceneDocument);
 
   // 检查是否点击了操纵器手柄
   GizmoHandleType handleType;
@@ -712,6 +845,9 @@ void RSInteractorV2::StartTransform()
 
   if (PickGizmoHandle(m_startMousePos[0], m_startMousePos[1], m_gizmoHandleType, axisIndex))
   {
+    if (!m_transformGizmo)
+      return;
+
     m_isGizmoInteracting = true;
     m_gizmoAxisIndex = axisIndex;
 
@@ -727,11 +863,17 @@ void RSInteractorV2::StartTransform()
     vtkProp3D* actor = PickActor(m_startMousePos[0], m_startMousePos[1]);
     if (actor)
     {
-      SceneObjectV2* obj = m_sceneManager->findObjectByActor(vtkActor::SafeDownCast(actor));
-      if (obj)
+      if (m_sceneManager)
       {
-        // 选中对象并显示操纵器
-        m_sceneManager->setObjectSelected(obj, true);
+        SceneObjectV2* obj = m_sceneManager->findObjectByActor(vtkActor::SafeDownCast(actor));
+        if (obj)
+          m_sceneManager->setObjectSelected(obj, true);
+      }
+      else if (sd)
+      {
+        auto* obj = sd->findObjectByActor(vtkActor::SafeDownCast(actor));
+        if (obj)
+          sd->setSelected(obj);
       }
     }
   }

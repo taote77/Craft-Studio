@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDoubleSpinBox>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
@@ -18,6 +19,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QProgressBar>
+#include <QSlider>
 #include <QSplitter>
 #include <QTabWidget>
 #include <QTableWidget>
@@ -26,22 +28,38 @@
 
 #include "engine/file_importer.h"
 
+#include <csengine/scene/scene_document.hpp>
+#include <csengine/scene/vtk_converter.hpp>
+#include <slicingcore/mesh/model_object.hpp>
+
 #include <vtkAxesActor.h>
 #include <vtkCamera.h>
 #include <vtkCameraOrientationWidget.h>
+#include <vtkCellArray.h>
+#include <vtkCylinderSource.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkOrientationMarkerWidget.h>
+#include <vtkPoints.h>
+#include <vtkPolyData.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
+#include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
 
 PlaterWidget::PlaterWidget(QWidget* parent, Qt::WindowFlags flag)
   : QVTKOpenGLNativeWidget(parent, flag)
   , m_buildPlatform(nullptr)
-  , m_sceneManager(nullptr)
+  , m_sceneDocument(nullptr)
+  , m_slicingController(nullptr)
+  , m_layerSlider(nullptr)
+  , m_layerLabel(nullptr)
 {
   // 创建核心组件
   m_buildPlatform = new BuildPlatform();
-  m_sceneManager = SceneManagerV2::getInstance();
+  m_sceneDocument = new csengine::SceneDocument(this);
+  m_slicingController = new csbridge::SlicingController(this);
 
   // 设置UI
   setupUI();
@@ -259,7 +277,7 @@ void PlaterWidget::setupViewport()
 
   m_interactor_style = vtkSmartPointer<RSInteractorV2>::New();
   m_interactor_style->SetRenderer(m_renderer);
-  m_interactor_style->SetSceneManager(m_sceneManager);
+  m_interactor_style->SetSceneDocument(m_sceneDocument);
 
   _axes_widget->SetInteractor(iterator);
   _axes_widget->SetEnabled(1);
@@ -307,9 +325,9 @@ void PlaterWidget::setupViewport()
   }
 
   // 将渲染器传递给场景管理器
-  if (m_sceneManager)
+  if (m_sceneDocument)
   {
-    m_sceneManager->setRenderer(m_renderer);
+    m_sceneDocument->setRenderer(m_renderer);
   }
 }
 
@@ -326,7 +344,7 @@ void PlaterWidget::setupRightPanel()
 
   // 创建标签页
   m_rightTabWidget = new QTabWidget();
-  m_rightTabWidget->setVisible(false);
+  m_rightTabWidget->setVisible(true); // 默认显示设置面板
   rightPanelLayout->addWidget(m_rightTabWidget);
 
   // 创建模型列表标签页
@@ -727,8 +745,21 @@ void PlaterWidget::setupBottomPanel()
 
   // 进度条
   m_progressBar = new QProgressBar();
-  m_progressBar->setVisible(false); // 默认隐藏
+  m_progressBar->setVisible(false);
   m_bottomPanelLayout->addWidget(m_progressBar);
+
+  // 层级预览滑块
+  m_layerLabel = new QLabel("层: -/-");
+  m_layerLabel->setMinimumWidth(80);
+  m_bottomPanelLayout->addWidget(m_layerLabel);
+
+  m_layerSlider = new QSlider(Qt::Horizontal);
+  m_layerSlider->setMinimum(0);
+  m_layerSlider->setMaximum(0);
+  m_layerSlider->setVisible(false);
+  m_layerSlider->setMinimumWidth(150);
+  connect(m_layerSlider, &QSlider::valueChanged, this, &PlaterWidget::updateLayerPreview);
+  m_bottomPanelLayout->addWidget(m_layerSlider);
 
   // 添加弹性空间
   m_bottomPanelLayout->addStretch();
@@ -878,17 +909,148 @@ void PlaterWidget::connectSignals()
     connect(m_gridSpacingSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
       &PlaterWidget::updatePlatformSettings);
 
+  // Support tab — enable/disable child controls based on checkboxes
+  connect(m_supportPillarCheckBox, &QCheckBox::toggled,
+          m_pillarSizeSpinBox, &QDoubleSpinBox::setEnabled);
+  connect(m_supportBaseCheckBox, &QCheckBox::toggled,
+          m_baseSizeSpinBox, &QDoubleSpinBox::setEnabled);
+  connect(m_supportBaseCheckBox, &QCheckBox::toggled,
+          m_baseHeightSpinBox, &QDoubleSpinBox::setEnabled);
+  // Initialize enabled state
+  m_pillarSizeSpinBox->setEnabled(m_supportPillarCheckBox->isChecked());
+  m_baseSizeSpinBox->setEnabled(m_supportBaseCheckBox->isChecked());
+  m_baseHeightSpinBox->setEnabled(m_supportBaseCheckBox->isChecked());
+
+  // Print settings — quality preset updates layer height
+  connect(m_qualityPresetCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, [this](int index) {
+    // Preset values (mm): Ultra High=0.05, High=0.1, Standard=0.2, Fast=0.3, Ultra Fast=0.4
+    const double presets[] = { 0.05, 0.1, 0.2, 0.3, 0.4 };
+    if (index >= 0 && index < static_cast<int>(sizeof(presets) / sizeof(presets[0])))
+      m_layerHeightSpinBox->setValue(presets[index]);
+  });
+
+  // Print settings — material preset updates temperatures
+  connect(m_materialTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, [this](int index) {
+    // PLA=0, ABS=1, PETG=2, TPU=3, Resin=4
+    struct MaterialPreset { double nozzle; double bed; };
+    const MaterialPreset presets[] = {
+      { 210, 60 },  // PLA
+      { 245, 90 },  // ABS
+      { 235, 75 },  // PETG
+      { 220, 50 },  // TPU
+      { 25,  0  },  // Resin (not applicable)
+    };
+    if (index >= 0 && index < static_cast<int>(sizeof(presets) / sizeof(presets[0])))
+    {
+      m_printTempSpinBox->setValue(presets[index].nozzle);
+      m_bedTempSpinBox->setValue(presets[index].bed);
+    }
+  });
+
   // 场景管理器信号连接
-  connect(m_sceneManager, &SceneManagerV2::multiSelectionChanged, this,
+  connect(m_sceneDocument, &csengine::SceneDocument::selectionChanged, this,
     &PlaterWidget::onSelectionChanged);
-  connect(m_sceneManager, &SceneManagerV2::objectGeometryChanged, this,
-    &PlaterWidget::onObjectGeometryChanged);
+  connect(m_sceneDocument, &csengine::SceneDocument::objectModified, this,
+    &PlaterWidget::onObjectModified);
+
+  // Model table selection → 3D viewport selection
+  connect(m_modelTable, &QTableWidget::cellClicked,
+          this, [this](int row, int /*col*/) {
+    auto objects = m_sceneDocument->objects();
+    if (row >= 0 && row < objects.size())
+    {
+      m_sceneDocument->setSelected(objects[row]);
+      if (m_renderWindow)
+        m_renderWindow->Render();
+    }
+  });
+
+  // 切片控制器信号连接
+  connect(m_slicingController, &csbridge::SlicingController::progressChanged,
+          this, [this](int percent) {
+    if (m_progressBar)
+    {
+      m_progressBar->setVisible(percent >= 0 && percent < 100);
+      m_progressBar->setValue(percent);
+    }
+  });
+  connect(m_slicingController, &csbridge::SlicingController::logMessage,
+          this, [this](const QString& msg) {
+    if (m_statusLabel) m_statusLabel->setText(msg);
+  });
+  connect(m_slicingController, &csbridge::SlicingController::sliceFinished,
+          this, [this](bool success, const QString& error) {
+    if (m_progressBar) m_progressBar->setVisible(false);
+    if (success)
+    {
+      auto* pipeline = m_slicingController->lastPipeline();
+      int layers = pipeline ? pipeline->totalLayerCount() : 0;
+      QString gcode = pipeline ? pipeline->gcodeText() : QString();
+      m_statusLabel->setText(QString("切片完成: %1 层").arg(layers));
+
+      // Estimate print time from path length
+      if (pipeline && layers > 0)
+      {
+        double totalPathMm = 0;
+        for (const auto& layer : pipeline->layers())
+          for (const auto& expoly : layer.slices())
+            for (size_t i = 0; i < expoly.contour.size(); ++i)
+            {
+              const auto& a = expoly.contour[i];
+              const auto& b = expoly.contour[(i+1) % expoly.contour.size()];
+              totalPathMm += a.dist(b) / 1000.0; // microns → mm
+            }
+        double speed = 60.0; // mm/s default
+        double printTimeMin = totalPathMm / speed / 60.0;
+        int hours = static_cast<int>(printTimeMin / 60);
+        int mins = static_cast<int>(printTimeMin) % 60;
+        m_printTimeLabel->setText(
+          QString("预估: %1h %2m").arg(hours).arg(mins, 2, 10, QChar('0')));
+      }
+
+      // Configure layer preview slider
+      if (m_layerSlider && layers > 0)
+      {
+        m_layerSlider->setMaximum(layers - 1);
+        m_layerSlider->setValue(0);
+        m_layerSlider->setVisible(true);
+        if (m_layerLabel)
+          m_layerLabel->setText(QString("层: 0/%1").arg(layers));
+      }
+
+      // Emit signal for UI updates (G-code preview)
+      emit slicingCompleted(layers, gcode);
+
+      // Save G-code to file
+      if (!gcode.isEmpty())
+      {
+        QString path = QFileDialog::getSaveFileName(
+          this, "保存G-code", "output.gcode", "G-code Files (*.gcode *.gco)");
+        if (!path.isEmpty())
+        {
+          QFile file(path);
+          if (file.open(QIODevice::WriteOnly | QIODevice::Text))
+          {
+            file.write(pipeline->gcodeText().toUtf8());
+            file.close();
+            m_statusLabel->setText(QString("G-code 已保存: %1").arg(path));
+          }
+        }
+      }
+    }
+    else
+    {
+      m_statusLabel->setText("切片失败: " + error);
+    }
+  });
 }
 
 void PlaterWidget::updateUI()
 {
   // 更新UI状态
-  bool hasSelection = !m_sceneManager->selectedObjects().isEmpty();
+  bool hasSelection = !m_sceneDocument->selection().isEmpty();
 
   // 更新工具栏按钮状态
   m_removeModelButton->setEnabled(hasSelection);
@@ -914,25 +1076,27 @@ void PlaterWidget::updateModelInfo()
   m_modelTable->setRowCount(0);
 
   int row = 0;
-  for (auto obj : m_sceneManager->rootObjects())
+  for (auto obj : m_sceneDocument->objects())
   {
     m_modelTable->insertRow(row);
 
     // 名称
-    m_modelTable->setItem(row, 0, new QTableWidgetItem(obj->name()));
+    m_modelTable->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(obj->name())));
 
-    // 尺寸
-    QVector3D size = obj->getSize();
+    // 尺寸 (from bounding box)
+    double sx, sy, sz, dummy;
+    obj->worldBounds(dummy, dummy, dummy, sx, sy, sz);
+    QVector3D size(sx, sy, sz);
     m_modelTable->setItem(row, 1,
       new QTableWidgetItem(
         QString("%1x%2x%3").arg(size.x(), 0, 'f', 1).arg(size.y(), 0, 'f', 1).arg(size.z(), 0, 'f', 1)));
 
-    // 体积
-    double volume = obj->metadata().volume;
+    // 体积 (from ImportResult, fallback to tetrahedral)
+    double volume = obj->importVolumeMm3() > 0 ? obj->importVolumeMm3() : obj->totalVolumeMm3();
     m_modelTable->setItem(row, 2, new QTableWidgetItem(QString("%1 cm³").arg(volume / 1000.0, 0, 'f', 2)));
 
-    // 重量
-    double weight = obj->metadata().weight;
+    // 重量 (from ImportResult, fallback to computed)
+    double weight = obj->importWeightG() > 0 ? obj->importWeightG() : volume / 1000.0 * 1.24;
     m_modelTable->setItem(row, 3, new QTableWidgetItem(QString("%1 g").arg(weight, 0, 'f', 2)));
 
     // 打印时间 - 简化计算（基于体积和层高）
@@ -950,17 +1114,18 @@ void PlaterWidget::updateModelInfo()
   }
 
   // 更新底部状态栏
-  int modelCount = m_sceneManager->rootObjects().count();
+  int modelCount = m_sceneDocument->objects().count();
   m_modelCountLabel->setText(QString("模型数量: %1").arg(modelCount));
 
   // 计算总重量和总打印时间
   double totalWeight = 0.0;
   double totalTime = 0.0;
 
-  for (auto obj : m_sceneManager->rootObjects())
+  for (auto obj : m_sceneDocument->objects())
   {
-    totalWeight += obj->metadata().weight;
-    double volume = obj->metadata().volume;
+    double volume = obj->importVolumeMm3() > 0 ? obj->importVolumeMm3() : obj->totalVolumeMm3();
+    double weight = obj->importWeightG() > 0 ? obj->importWeightG() : volume / 1000.0 * 1.24;
+    totalWeight += weight;
     double layerHeight = m_layerHeightSpinBox ? m_layerHeightSpinBox->value() : 0.1;
     if (volume > 0.0 && layerHeight > 0.0)
     {
@@ -1003,36 +1168,50 @@ void PlaterWidget::addModel()
 
   if (result.success)
   {
-    // 创建场景对象
-    SceneObjectV2* obj = new SceneObjectV2(QFileInfo(fileName).baseName(), result.actor);
+    // Convert VTK data to engine mesh (for slicing)
+    slicing::TriangleMesh mesh = csengine::triangleMeshFromVTK(result.polyData);
+    // Auto-repair mesh
+    mesh = csengine::repairMesh(mesh);
+    QString name = QFileInfo(fileName).baseName();
 
-    obj->setPolyData(result.polyData);
+    // Add model: use VTK polydata directly for rendering (avoids re-conversion)
+    slicing::ModelObject* obj = m_sceneDocument->addModelWithVTK(
+        std::move(mesh), result.polyData, name);
 
-    // 设置元数据
-    ObjectMetadata metadata;
-    metadata.meshInfo = result.meshInfo;
-    metadata.volume = result.volume;
-    metadata.weight = result.weight;
-    metadata.fileSize = result.fileSize;
-    metadata.importTime = QDateTime::currentDateTime();
-    metadata.lastModified = QDateTime::currentDateTime();
-    obj->setMetadata(metadata);
+    // Preserve import metadata
+    obj->setMeshInfo(result.meshInfo.toStdString());
+    obj->setImportVolume(result.volume);
+    obj->setImportWeight(result.weight);
 
-    // 添加到场景管理器
-    m_sceneManager->addObject(obj);
+    // Set renderer on document if not already set
+    if (m_renderer)
+    {
+      m_sceneDocument->setRenderer(m_renderer);
+      m_sceneDocument->syncToRenderer();
+    }
 
-    // 触发渲染窗口更新
+    // Auto-center model on build plate
+    if (m_buildPlatform && obj)
+    {
+      double bw = m_buildPlatform->width();
+      double bh = m_buildPlatform->height();
+      double cx = bw / 2.0, cy = bh / 2.0;
+      obj->setPosition(cx, cy, 0);
+      m_sceneDocument->syncToRenderer();
+    }
+
+    // Trigger render
     if (m_renderWindow)
     {
       m_renderWindow->Render();
     }
 
-    // 更新UI
+    // Update UI
     updateUI();
     updateModelInfo();
 
     m_statusLabel->setText("成功加载模型: " + QFileInfo(fileName).fileName());
-    // emit modelAdded();
+    emit modelAdded();
   }
   else
   {
@@ -1043,8 +1222,8 @@ void PlaterWidget::addModel()
 
 void PlaterWidget::removeSelectedModels()
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
-  m_sceneManager->removeObjects(selectedObjects);
+  auto selectedObjects = m_sceneDocument->selection();
+  m_sceneDocument->removeModels(selectedObjects);
   
   // 触发渲染窗口更新
   if (m_renderWindow)
@@ -1061,18 +1240,23 @@ void PlaterWidget::removeSelectedModels()
 
 void PlaterWidget::duplicateSelectedModels()
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
+  auto selectedObjects = m_sceneDocument->selection();
 
   for (auto obj : selectedObjects)
   {
-    SceneObjectV2* newObj = obj->clone();
+    // Duplicate by re-adding the mesh data
+    if (obj->volumeCount() > 0)
+    {
+      slicing::TriangleMesh mesh = obj->volumes()[0].mesh(); // copy mesh
+      QString name = QString::fromStdString(obj->name()) + "_copy";
+      slicing::ModelObject* newObj = m_sceneDocument->addModel(std::move(mesh), name);
 
-    // 稍微偏移复制后的模型位置
-    QVector3D pos = obj->position();
-    pos.setX(pos.x() + 10.0); // 向右偏移10mm
-    newObj->setPosition(pos);
-
-    m_sceneManager->addObject(newObj);
+      // Offset the copy
+      newObj->setPosition(
+        obj->placement().posX + 10.0,
+        obj->placement().posY,
+        obj->placement().posZ);
+    }
   }
 
   if (!selectedObjects.isEmpty())
@@ -1096,76 +1280,227 @@ void PlaterWidget::duplicateSelectedModels()
 
 void PlaterWidget::translateModel(double x, double y, double z)
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
+  auto selectedObjects = m_sceneDocument->selection();
   if (!selectedObjects.isEmpty())
   {
-    m_sceneManager->setObjectsTranslation(selectedObjects, x, y, z);
+    m_sceneDocument->translate({ selectedObjects }, x, y, z);
     emit modelTransformed();
   }
 }
 
 void PlaterWidget::rotateModel(double x, double y, double z)
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
+  auto selectedObjects = m_sceneDocument->selection();
   if (!selectedObjects.isEmpty())
   {
-    m_sceneManager->setObjectsRotation(selectedObjects, x, y, z);
+    m_sceneDocument->rotate({ selectedObjects }, x, y, z);
     emit modelTransformed();
   }
 }
 
 void PlaterWidget::scaleModel(double x, double y, double z)
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
+  auto selectedObjects = m_sceneDocument->selection();
   if (!selectedObjects.isEmpty())
   {
-    m_sceneManager->setObjectsScale(selectedObjects, x, y, z);
+    m_sceneDocument->scale({ selectedObjects }, x, y, z);
     emit modelTransformed();
   }
 }
 
 void PlaterWidget::autoLayout()
 {
-  m_sceneManager->autoLayoutObjects();
+  auto objects = m_sceneDocument->objects();
+  if (objects.isEmpty())
+    return;
+
+  double bw = m_buildPlatform ? m_buildPlatform->width() : 200.0;
+  double bh = m_buildPlatform ? m_buildPlatform->height() : 200.0;
+  double margin = 5.0;
+
+  // Sort objects by size (largest first) for better packing
+  QList<slicing::ModelObject*> sorted = objects;
+  std::sort(sorted.begin(), sorted.end(),
+            [](slicing::ModelObject* a, slicing::ModelObject* b) {
+    double minAX, minAY, minAZ, maxAX, maxAY, maxAZ;
+    double minBX, minBY, minBZ, maxBX, maxBY, maxBZ;
+    a->worldBounds(minAX, minAY, minAZ, maxAX, maxAY, maxAZ);
+    b->worldBounds(minBX, minBY, minBZ, maxBX, maxBY, maxBZ);
+    double areaA = (maxAX - minAX) * (maxAY - minAY);
+    double areaB = (maxBX - minBX) * (maxBY - minBY);
+    return areaA > areaB; // largest first
+  });
+
+  double curX = margin, curY = margin;
+  double rowMaxH = 0.0;
+
+  for (auto* obj : sorted)
+  {
+    double minX, minY, minZ, maxX, maxY, maxZ;
+    obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+    double w = maxX - minX;
+    double h = maxY - minY;
+
+    // Wrap to next row if object doesn't fit in current row
+    if (curX + w > bw - margin && curX > margin)
+    {
+      curX = margin;
+      curY += rowMaxH + margin;
+      rowMaxH = 0.0;
+    }
+
+    // Skip if object is too large for a new row
+    if (curY + h > bh - margin)
+    {
+      qWarning() << "Build plate full, skipping:" << obj->name().c_str();
+      continue;
+    }
+
+    // Move object: align bottom-left to (curX, curY), bottom to Z=0
+    obj->setPosition(curX - minX, curY - minY, -minZ);
+    curX += w + margin;
+    rowMaxH = qMax(rowMaxH, h);
+  }
+
+  m_sceneDocument->syncToRenderer();
+  if (m_renderWindow)
+    m_renderWindow->Render();
+
+  m_statusLabel->setText(QString("自动布局完成: %1 个模型").arg(sorted.size()));
   emit modelTransformed();
 }
 
 void PlaterWidget::arrangeInGrid()
 {
-  m_sceneManager->arrangeInGrid(3);
+  auto objects = m_sceneDocument->objects();
+  if (objects.isEmpty())
+    return;
+
+  double bw = m_buildPlatform ? m_buildPlatform->width() : 200.0;
+  double bh = m_buildPlatform ? m_buildPlatform->height() : 200.0;
+  double margin = 5.0;
+
+  int n = objects.size();
+  int cols = qMax(1, static_cast<int>(ceil(sqrt(static_cast<double>(n)))));
+  double cellW = (bw - margin * (cols + 1)) / cols;
+
+  for (int i = 0; i < n; ++i)
+  {
+    auto* obj = objects[i];
+    double minX, minY, minZ, maxX, maxY, maxZ;
+    obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+
+    int row = i / cols;
+    int col = i % cols;
+    double targetX = margin + col * (cellW + margin) + cellW / 2.0;
+    double targetY = margin + row * (cellW + margin) + cellW / 2.0;
+
+    double cx = (minX + maxX) / 2.0;
+    double cy = (minY + maxY) / 2.0;
+    obj->setPosition(targetX - cx + obj->placement().posX,
+                     targetY - cy + obj->placement().posY,
+                     -minZ);
+  }
+
+  m_sceneDocument->syncToRenderer();
+  if (m_renderWindow)
+    m_renderWindow->Render();
+
+  m_statusLabel->setText(QString("网格排列完成: %1×%2").arg(cols).arg((n + cols - 1) / cols));
   emit modelTransformed();
 }
 
 void PlaterWidget::centerModel()
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
-  if (!selectedObjects.isEmpty())
+  auto selectedObjects = m_sceneDocument->selection();
+  if (selectedObjects.isEmpty())
   {
-    for (auto obj : selectedObjects)
-    {
-      // 将模型中心移动到原点
-      obj->setPosition(QVector3D(0, 0, 0));
-    }
-    m_statusLabel->setText("居中模型完成");
-    emit modelTransformed();
+    m_statusLabel->setText("没有选中的模型");
+    return;
   }
+
+  double bw = m_buildPlatform ? m_buildPlatform->width() : 200.0;
+  double bh = m_buildPlatform ? m_buildPlatform->height() : 200.0;
+  double cx = bw / 2.0, cy = bh / 2.0;
+
+  for (auto* obj : selectedObjects)
+  {
+    double minX, minY, minZ, maxX, maxY, maxZ;
+    obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+    double objCx = (minX + maxX) / 2.0;
+    double objCy = (minY + maxY) / 2.0;
+    obj->setPosition(cx - objCx + obj->placement().posX,
+                     cy - objCy + obj->placement().posY,
+                     -minZ);
+  }
+
+  if (m_renderWindow)
+    m_renderWindow->Render();
+
+  m_statusLabel->setText("居中模型完成");
+  emit modelTransformed();
 }
 
 void PlaterWidget::layFlat()
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
-  if (!selectedObjects.isEmpty())
+  auto selectedObjects = m_sceneDocument->selection();
+  if (selectedObjects.isEmpty())
   {
-    // 简单实现：将模型Z坐标设置为0
-    for (auto obj : selectedObjects)
-    {
-      QVector3D pos = obj->position();
-      pos.setZ(0.0); // 平放在Z=0平面上
-      obj->setPosition(pos);
-    }
-    m_statusLabel->setText("模型已平放");
-    emit modelTransformed();
+    m_statusLabel->setText("没有选中的模型");
+    return;
   }
+
+  // For each selected model, try several orientations and pick the one
+  // that minimizes Z-extent (makes the model as flat as possible).
+  const int numSteps = 6; // every 60 degrees around X and Y
+  for (auto* obj : selectedObjects)
+  {
+    // Store original placement
+    double origPX = obj->placement().posX;
+    double origPY = obj->placement().posY;
+
+    double bestZExtent = std::numeric_limits<double>::max();
+    double bestRX = 0.0, bestRY = 0.0;
+
+    // Try rotations around X and Y axes
+    for (int xi = 0; xi < numSteps; ++xi)
+    {
+      double rx = xi * 360.0 / numSteps;
+      for (int yi = 0; yi < numSteps; ++yi)
+      {
+        double ry = yi * 360.0 / numSteps;
+        // Apply candidate rotation (keep position unchanged)
+        obj->setRotation(rx, ry, 0);
+
+        // Measure Z extent
+        double minX, minY, minZ, maxX, maxY, maxZ;
+        obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+        double zExtent = maxZ - minZ;
+
+        if (zExtent < bestZExtent)
+        {
+          bestZExtent = zExtent;
+          bestRX = rx;
+          bestRY = ry;
+        }
+      }
+    }
+
+    // Apply best rotation and drop to Z=0
+    obj->setRotation(bestRX, bestRY, 0);
+
+    // Re-read bounds after rotation to set Z correctly
+    double minX, minY, minZ, maxX, maxY, maxZ;
+    obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+    obj->setPosition(origPX, origPY, -minZ);
+  }
+
+  m_sceneDocument->syncToRenderer();
+  if (m_renderWindow)
+    m_renderWindow->Render();
+
+  m_statusLabel->setText(QString("平放完成: %1 个模型").arg(selectedObjects.size()));
+  emit modelTransformed();
 }
 
 void PlaterWidget::setViewType(int type)
@@ -1220,22 +1555,32 @@ void PlaterWidget::updatePlatformSettings()
   m_buildPlatform->setDepth(m_platformDepthSpinBox->value());
   m_buildPlatform->setGridSpacing(m_gridSpacingSpinBox->value());
 
+  // Trigger 3D viewport refresh
+  if (m_renderWindow)
+    m_renderWindow->Render();
+
   emit platformSettingsChanged();
 }
 
 void PlaterWidget::setShowGrid(bool show)
 {
   m_buildPlatform->setGridVisible(show);
+  if (m_renderWindow)
+    m_renderWindow->Render();
 }
 
 void PlaterWidget::setShowAxes(bool show)
 {
   m_buildPlatform->setAxisVisible(show);
+  if (m_renderWindow)
+    m_renderWindow->Render();
 }
 
 void PlaterWidget::setShowRuler(bool show)
 {
   m_buildPlatform->setRulerVisible(show);
+  if (m_renderWindow)
+    m_renderWindow->Render();
 }
 
 void PlaterWidget::setShowPlatform(bool show)
@@ -1255,48 +1600,298 @@ void PlaterWidget::setPlatformVisible(bool visible)
   setShowPlatform(visible);
 }
 
+void PlaterWidget::clearSupportActors()
+{
+  for (auto& actor : _supportActors)
+  {
+    if (actor && m_renderer)
+      m_renderer->RemoveActor(actor);
+  }
+  _supportActors.clear();
+}
+
 void PlaterWidget::generateSupport()
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
-  if (!selectedObjects.isEmpty())
+  auto selectedObjects = m_sceneDocument->selection();
+  if (selectedObjects.isEmpty())
   {
-    // 暂时注释，后续根据SceneObject扩展
-
-    for (auto obj : selectedObjects)
-    {
-      obj->setHasSupport(true);
-    }
-    m_statusLabel->setText("生成支撑完成");
+    m_statusLabel->setText("没有选中的模型");
+    return;
   }
+
+  // Remove old support geometry
+  clearSupportActors();
+  for (auto* obj : selectedObjects)
+    obj->setHasSupport(false);
+
+  // Read parameters from UI
+  double density = m_supportDensitySpinBox ? m_supportDensitySpinBox->value() : 0.15;
+  double pillarSize = m_pillarSizeSpinBox ? m_pillarSizeSpinBox->value() : 0.8;
+  double zOffset = m_supportZOffsetSpinBox ? m_supportZOffsetSpinBox->value() : 0.2;
+  bool usePillars = m_supportPillarCheckBox ? m_supportPillarCheckBox->isChecked() : true;
+  bool useBase = m_supportBaseCheckBox ? m_supportBaseCheckBox->isChecked() : true;
+  double baseSize = m_baseSizeSpinBox ? m_baseSizeSpinBox->value() : 5.0;
+  double baseHeight = m_baseHeightSpinBox ? m_baseHeightSpinBox->value() : 1.0;
+
+  if (!usePillars)
+  {
+    m_statusLabel->setText("支撑支柱已禁用");
+    return;
+  }
+
+  int totalPillars = 0;
+
+  for (auto* obj : selectedObjects)
+  {
+    if (obj->volumeCount() == 0)
+      continue;
+
+    // Get the mesh from the first volume
+    const auto& mesh = obj->volumes()[0].mesh();
+    const auto& triangles = mesh.triangles();
+    const auto& verts = mesh.vertices();
+
+    if (triangles.empty() || verts.empty())
+      continue;
+
+    // Overhang threshold: faces with normal Z < -0.3 (~72° overhang angle)
+    const double overhangThreshold = -0.3;
+
+    // Find the Z-extent of the model for density calculation
+    double minX, minY, minZ, maxX, maxY, maxZ;
+    obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+
+    // Collect overhang support points
+    struct SupportPoint { double x, y, z; };
+    std::vector<SupportPoint> candidates;
+
+    for (const auto& tri : triangles)
+    {
+      // Compute face normal using cross product
+      const auto& v0 = verts[tri.v0];
+      const auto& v1 = verts[tri.v1];
+      const auto& v2 = verts[tri.v2];
+
+      double ax = slicing::unscale(v1.x - v0.x), ay = slicing::unscale(v1.y - v0.y), az = slicing::unscale(v1.z - v0.z);
+      double bx = slicing::unscale(v2.x - v0.x), by = slicing::unscale(v2.y - v0.y), bz = slicing::unscale(v2.z - v0.z);
+
+      double nx = ay * bz - az * by;
+      double ny = az * bx - ax * bz;
+      double nz = ax * by - ay * bx;
+
+      double len = sqrt(nx * nx + ny * ny + nz * nz);
+      if (len < 1e-9)
+        continue;
+      nx /= len;
+      ny /= len;
+      nz /= len;
+
+      // Check for overhang (downward-facing face)
+      if (nz < overhangThreshold)
+      {
+        // Centroid of the triangle (convert from scaled microns to mm)
+        double cx = slicing::unscale((v0.x + v1.x + v2.x) / 3);
+        double cy = slicing::unscale((v0.y + v1.y + v2.y) / 3);
+        double cz = slicing::unscale((v0.z + v1.z + v2.z) / 3);
+
+        // Project support point to Z=0 + zOffset (build plate)
+        candidates.push_back({ cx, cy, cz + zOffset });
+      }
+    }
+
+    if (candidates.empty())
+      continue;
+
+    // Sample support points based on density
+    // Density: higher value = more supports. Sample grid spacing inversely proportional to density.
+    double gridSpacing = 10.0 / density; // density 0.15 → ~66mm, 0.5 → 20mm
+    gridSpacing = qMax(2.0, qMin(gridSpacing, 50.0));
+
+    std::vector<SupportPoint> sampled;
+    for (const auto& pt : candidates)
+    {
+      // Check if this point is far enough from already-sampled points
+      bool tooClose = false;
+      for (const auto& sp : sampled)
+      {
+        double dx = pt.x - sp.x, dy = pt.y - sp.y;
+        if (dx * dx + dy * dy < gridSpacing * gridSpacing)
+        {
+          tooClose = true;
+          break;
+        }
+      }
+      if (!tooClose && pt.z > minZ + 0.5) // must be above the bottom of the model
+        sampled.push_back(pt);
+    }
+
+    // Generate pillar geometry for each support point
+    for (const auto& pt : sampled)
+    {
+      if (pt.z <= 0.1)
+        continue;
+
+      double pillarHeight = pt.z;
+      double pillarRadius = pillarSize;
+
+      // Create cylinder for pillar
+      auto cylinder = vtkSmartPointer<vtkCylinderSource>::New();
+      cylinder->SetRadius(pillarRadius);
+      cylinder->SetHeight(pillarHeight);
+      cylinder->SetResolution(8);
+      cylinder->SetCenter(0, pillarHeight / 2.0, 0);
+
+      // Position the pillar
+      auto transform = vtkSmartPointer<vtkTransform>::New();
+      transform->Translate(pt.x, pt.y, 0);
+      transform->RotateX(90); // cylinder along Y → Z axis
+
+      auto transformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+      transformFilter->SetInputConnection(cylinder->GetOutputPort());
+      transformFilter->SetTransform(transform);
+      transformFilter->Update();
+
+      auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+      mapper->SetInputConnection(transformFilter->GetOutputPort());
+
+      auto actor = vtkSmartPointer<vtkActor>::New();
+      actor->SetMapper(mapper);
+      actor->GetProperty()->SetColor(0.3, 0.8, 0.3); // green supports
+      actor->GetProperty()->SetOpacity(0.6);
+      actor->SetPickable(false);
+
+      if (m_renderer)
+        m_renderer->AddActor(actor);
+      _supportActors.push_back(actor);
+      totalPillars++;
+
+      // Add base pad if enabled
+      if (useBase)
+      {
+        auto base = vtkSmartPointer<vtkCylinderSource>::New();
+        base->SetRadius(baseSize);
+        base->SetHeight(baseHeight);
+        base->SetResolution(12);
+        base->SetCenter(0, baseHeight / 2.0, 0);
+
+        auto baseTransform = vtkSmartPointer<vtkTransform>::New();
+        baseTransform->Translate(pt.x, pt.y, 0);
+        baseTransform->RotateX(90);
+
+        auto baseFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+        baseFilter->SetInputConnection(base->GetOutputPort());
+        baseFilter->SetTransform(baseTransform);
+        baseFilter->Update();
+
+        auto baseMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+        baseMapper->SetInputConnection(baseFilter->GetOutputPort());
+
+        auto baseActor = vtkSmartPointer<vtkActor>::New();
+        baseActor->SetMapper(baseMapper);
+        baseActor->GetProperty()->SetColor(0.3, 0.8, 0.3);
+        baseActor->GetProperty()->SetOpacity(0.6);
+        baseActor->SetPickable(false);
+
+        if (m_renderer)
+          m_renderer->AddActor(baseActor);
+        _supportActors.push_back(baseActor);
+      }
+    }
+
+    obj->setHasSupport(!sampled.empty());
+  }
+
+  if (m_renderWindow)
+    m_renderWindow->Render();
+
+  m_statusLabel->setText(QString("生成支撑完成: %1 个支柱").arg(totalPillars));
 }
 
 void PlaterWidget::removeSupport()
 {
-  auto selectedObjects = m_sceneManager->selectedObjects();
-  if (!selectedObjects.isEmpty())
-  {
-    // 暂时注释，后续根据SceneObject扩展
-    // for (auto obj : selectedObjects)
-    // {
-    //   obj->setHasSupport(false);
-    // }
-    m_statusLabel->setText("移除支撑完成");
-  }
+  clearSupportActors();
+
+  for (auto* obj : m_sceneDocument->objects())
+    obj->setHasSupport(false);
+
+  if (m_renderWindow)
+    m_renderWindow->Render();
+
+  m_statusLabel->setText("移除支撑完成");
 }
 
 void PlaterWidget::previewPrint()
 {
-  // TODO: 实现打印预览
-  m_statusLabel->setText("生成打印预览...");
+  generateGCode(); // Preview = slice + show layers
 }
 
 void PlaterWidget::generateGCode()
 {
-  // TODO: 实现G代码生成
-  m_statusLabel->setText("生成G代码...");
+  if (m_slicingController->isSlicing())
+  {
+    m_slicingController->cancelSlice();
+    m_statusLabel->setText("取消切片...");
+    return;
+  }
+
+  auto objects = m_sceneDocument->objects();
+  if (objects.isEmpty())
+  {
+    m_statusLabel->setText("没有模型可以切片");
+    return;
+  }
+
+  // Check for model collisions
+  auto collisions = m_sceneDocument->checkCollisions();
+  if (!collisions.isEmpty())
+  {
+    QStringList names;
+    for (const auto& c : collisions)
+      names << QString("%1 ↔ %2")
+        .arg(QString::fromStdString(c.a->name()))
+        .arg(QString::fromStdString(c.b->name()));
+    auto reply = QMessageBox::warning(this, "模型碰撞",
+      QString("检测到模型重叠:\n%1\n\n继续切片可能导致打印失败。是否继续?")
+        .arg(names.join("\n")),
+      QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (reply == QMessageBox::No) return;
+  }
+
+  // Check if models fit on the build plate
+  if (m_buildPlatform)
+  {
+    double bw = m_buildPlatform->width(), bh = m_buildPlatform->height();
+    QStringList outOfBounds;
+    for (auto* obj : objects)
+    {
+      double minX, minY, minZ, maxX, maxY, maxZ;
+      obj->worldBounds(minX, minY, minZ, maxX, maxY, maxZ);
+      if (minX < 0 || minY < 0 || maxX > bw || maxY > bh)
+        outOfBounds << QString::fromStdString(obj->name());
+    }
+    if (!outOfBounds.isEmpty())
+    {
+      auto reply = QMessageBox::warning(this, "超出平台",
+        QString("以下模型超出打印平台范围:\n%1\n\n继续切片可能导致打印失败。是否继续?")
+          .arg(outOfBounds.join("\n")),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+      if (reply == QMessageBox::No) return;
+    }
+  }
+
+  // Convert QList → std::vector for SlicingController
+  std::vector<slicing::ModelObject*> objVec(objects.begin(), objects.end());
+
+  double layerHeight = m_layerHeightSpinBox ? m_layerHeightSpinBox->value() : 0.2;
+
+  m_statusLabel->setText("开始切片...");
+  m_progressBar->setVisible(true);
+  m_progressBar->setValue(0);
+
+  m_slicingController->startSlice(objVec, slicing::scale(layerHeight));
 }
 
-void PlaterWidget::onSelectionChanged(const QList<SceneObjectV2*>& selectedObjects)
+void PlaterWidget::onSelectionChanged(const QList<slicing::ModelObject*>& selectedObjects)
 {
   updateUI();
 
@@ -1307,24 +1902,24 @@ void PlaterWidget::onSelectionChanged(const QList<SceneObjectV2*>& selectedObjec
 
   // 更新变换面板 - 暂时注释，后续根据SceneObject扩展
 
-  SceneObjectV2* firstObj = selectedObjects.first();
+  slicing::ModelObject* firstObj = selectedObjects.first();
 
   m_updatingUI = true;
 
   // 更新位置
-  QVector3D pos = firstObj->position();
+  QVector3D pos = QVector3D(firstObj->placement().posX, firstObj->placement().posY, firstObj->placement().posZ);
   m_posXSpinBox->setValue(pos.x());
   m_posYSpinBox->setValue(pos.y());
   m_posZSpinBox->setValue(pos.z());
 
   // 更新旋转
-  QVector3D rot = firstObj->rotation();
+  QVector3D rot(firstObj->placement().rotX, firstObj->placement().rotY, firstObj->placement().rotZ);
   m_rotXSpinBox->setValue(rot.x());
   m_rotYSpinBox->setValue(rot.y());
   m_rotZSpinBox->setValue(rot.z());
 
   // 更新缩放
-  QVector3D scale = firstObj->scale();
+  QVector3D scale(firstObj->placement().scaleX, firstObj->placement().scaleY, firstObj->placement().scaleZ);
   m_scaleXSpinBox->setValue(scale.x());
   m_scaleYSpinBox->setValue(scale.y());
   m_scaleZSpinBox->setValue(scale.z());
@@ -1332,7 +1927,7 @@ void PlaterWidget::onSelectionChanged(const QList<SceneObjectV2*>& selectedObjec
   m_updatingUI = false;
 }
 
-void PlaterWidget::onObjectGeometryChanged(SceneObjectV2* obj)
+void PlaterWidget::onObjectModified(slicing::ModelObject* obj)
 {
   updateModelInfo();
   emit modelTransformed();
@@ -1491,4 +2086,73 @@ void PlaterWidget::cycleViewTypes()
   QString viewTypeNames[] = { "透视图", "正交图", "顶视图", "底视图", "前视图", "后视图", "左视图",
     "右视图" };
   m_statusLabel->setText(QString("视图: %1").arg(viewTypeNames[m_currentViewType]));
+}
+
+void PlaterWidget::updateLayerPreview()
+{
+    if (!m_layerSlider || !m_renderer || !m_slicingController) return;
+
+    auto* pipeline = m_slicingController->lastPipeline();
+    if (!pipeline) return;
+
+    int layerIdx = m_layerSlider->value();
+    const auto& layers = pipeline->layers();
+    if (layerIdx < 0 || static_cast<size_t>(layerIdx) >= layers.size()) return;
+
+    // Remove old preview actor
+    if (m_previewActor)
+    {
+        m_renderer->RemoveActor(m_previewActor);
+        m_previewActor = nullptr;
+    }
+
+    const auto& layer = layers[layerIdx];
+    if (layer.empty()) return;
+
+    // Build VTK polydata for this layer's slices
+    vtkNew<vtkPoints> points;
+    vtkNew<vtkCellArray> lines;
+    vtkIdType ptIdx = 0;
+
+    for (const auto& expoly : layer.slices())
+    {
+        const auto& contour = expoly.contour;
+        if (contour.size() < 2) continue;
+
+        vtkIdType startIdx = ptIdx;
+        for (const auto& pt : contour)
+        {
+            points->InsertNextPoint(slicing::unscale(pt.x), slicing::unscale(pt.y), layer.zMm());
+            ptIdx++;
+        }
+        // Connect points as line loop
+        for (vtkIdType i = 0; i < static_cast<vtkIdType>(contour.size()); ++i)
+        {
+            vtkIdType p1 = startIdx + i;
+            vtkIdType p2 = startIdx + (i + 1) % contour.size();
+            lines->InsertNextCell(2);
+            lines->InsertCellPoint(p1);
+            lines->InsertCellPoint(p2);
+        }
+    }
+
+    if (points->GetNumberOfPoints() == 0) return;
+
+    vtkNew<vtkPolyData> polyData;
+    polyData->SetPoints(points);
+    polyData->SetLines(lines);
+
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputData(polyData);
+
+    m_previewActor = vtkSmartPointer<vtkActor>::New();
+    m_previewActor->SetMapper(mapper);
+    m_previewActor->GetProperty()->SetColor(0.0, 1.0, 0.0); // green lines
+    m_previewActor->GetProperty()->SetLineWidth(2.0);
+    m_renderer->AddActor(m_previewActor);
+
+    if (m_layerLabel)
+        m_layerLabel->setText(QString("层: %1/%2").arg(layerIdx).arg(layers.size()));
+
+    m_renderWindow->Render();
 }

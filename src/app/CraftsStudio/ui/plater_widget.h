@@ -11,7 +11,6 @@ class QToolButton;
 class QCheckBox;
 class QHBoxLayout;
 class QProgressBar;
-class QProgressBar;
 class QTableWidget;
 class QSplitter;
 class QVBoxLayout;
@@ -22,14 +21,15 @@ class vtkRenderer;
 class vtkOrientationMarkerWidget;
 
 #include <QVTKOpenGLNativeWidget.h>
+#include <vtkActor.h>
 #include <vtkSmartPointer.h>
 
 #include "engine/build_platform.h"
 #include "engine/rs_interactor_v2.h"
-#include "engine/rs_scene_manager_v2.h"
-#include "engine/rs_scene_object_v2.h"
 
-// 使用 rs_interactor_v2.h 中定义的 ViewType 枚举
+#include <csengine/scene/scene_document.hpp>
+#include <csbridge/slicing_controller.hpp>
+#include <slicingcore/mesh/model_object.hpp>
 
 // Plater工作台主界面类，负责3D打印前处理的主要功能
 class PlaterWidget : public QVTKOpenGLNativeWidget
@@ -49,8 +49,11 @@ public:
   // 获取交互器
   vtkSmartPointer<RSInteractorV2> getInteractor() const { return m_interactor_style; }
 
-  // 获取场景管理器
-  SceneManagerV2* getSceneManager() const { return m_sceneManager; }
+  // 获取场景文档
+  csengine::SceneDocument* getSceneDocument() const { return m_sceneDocument; }
+
+  // 获取切片控制器
+  csbridge::SlicingController* getSlicingController() const { return m_slicingController; }
 
   // 获取构建平台
   BuildPlatform* getBuildPlatform() const { return m_buildPlatform; }
@@ -81,15 +84,6 @@ public slots:
   void centerModel();
   void layFlat();
 
-  // TODO: PlaterWidget 完全实现后启用
-  /*
-  // 视图控制
-  void setViewType(int type);
-  void resetCamera();
-  void fitAll();
-  void fitSelected();
-  */
-
   // 构建平台设置
   void updatePlatformSettings();
 
@@ -111,17 +105,11 @@ signals:
   // 模型变化信号
   void modelAdded();
   void modelRemoved();
-  void modelSelected(SceneObjectV2* obj);
+  void modelSelected(slicing::ModelObject* obj);
   void modelTransformed();
 
-  // TODO: PlaterWidget 完全实现后启用
-  /*
-  // 视图变化信号
-  void viewTypeChanged(int type);
-  void cameraReset();
-  void cameraFitAll();
-  void cameraFitSelected();
-  */
+  // 切片完成信号
+  void slicingCompleted(int layerCount, const QString& gcodeText);
 
   // 构建平台变化信号
   void platformSettingsChanged();
@@ -135,8 +123,8 @@ signals:
 
 private slots:
   // 内部槽函数
-  void onSelectionChanged(const QList<SceneObjectV2*>& selectedObjects);
-  void onObjectGeometryChanged(SceneObjectV2* obj);
+  void onSelectionChanged(const QList<slicing::ModelObject*>& selectedObjects);
+  void onObjectModified(slicing::ModelObject* obj);
   void onPlatformPropertyChanged();
 
 protected:
@@ -192,13 +180,12 @@ private:
 
   // 3D视口
   QWidget* m_viewportWidget;
-  QWidget* m_vtkWidget; // 临时使用 QWidget，后续可以根据Qt版本和VTK配置修改
+  QWidget* m_vtkWidget;
   vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
   vtkSmartPointer<vtkRenderer> m_renderer;
   vtkSmartPointer<RSInteractorV2> m_interactor_style;
 
   vtkSmartPointer<vtkOrientationMarkerWidget> _axes_widget;
-
   vtkSmartPointer<vtkCameraOrientationWidget> _cam_widget;
 
   // 右侧面板
@@ -280,9 +267,21 @@ private:
   QLabel* m_materialUsageLabel;
   QProgressBar* m_progressBar;
 
+  // 切片预览
+  QSlider* m_layerSlider;
+  QLabel* m_layerLabel;
+  vtkSmartPointer<vtkActor> m_previewActor;
+  bool m_previewMode = false;
+  void updateLayerPreview();
+
+  // 支撑结构
+  QList<vtkSmartPointer<vtkActor>> _supportActors;
+  void clearSupportActors();
+
   // 核心组件
   BuildPlatform* m_buildPlatform;
-  SceneManagerV2* m_sceneManager;
+  csengine::SceneDocument* m_sceneDocument;
+  csbridge::SlicingController* m_slicingController;
 
   // 视图控制状态
   struct SavedView
@@ -297,7 +296,7 @@ private:
   } m_savedView;
 
   // 视图状态
-  int m_currentViewType = 0; // 当前视图类型索引
+  int m_currentViewType = 0;
 
   // 状态变量
   bool m_updatingUI = false;

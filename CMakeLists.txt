@@ -23,16 +23,14 @@ find_package(QT NAMES Qt6 Qt5 COMPONENTS
     Network
     Qml
     Quick
-    SerialBus
     SerialPort
     Sql
-    WebChannel
     WebSockets
     Widgets
     Xml REQUIRED
 )
 
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS 
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS
     Concurrent
     DBus
     Gui
@@ -40,10 +38,8 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS
     Network
     Qml
     Quick
-    SerialBus
     SerialPort
     Sql
-    WebChannel
     WebSockets
     Widgets
     Xml REQUIRED
@@ -60,13 +56,10 @@ link_libraries(
     Qt${QT_VERSION_MAJOR}::Network
     Qt${QT_VERSION_MAJOR}::Qml
     Qt${QT_VERSION_MAJOR}::Quick
-    Qt${QT_VERSION_MAJOR}::SerialBus
     Qt${QT_VERSION_MAJOR}::SerialPort
     Qt${QT_VERSION_MAJOR}::Sql
-    Qt${QT_VERSION_MAJOR}::WebChannel
-    Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::Xml
     Qt${QT_VERSION_MAJOR}::WebSockets
+    Qt${QT_VERSION_MAJOR}::Xml
 )
 
 
@@ -75,6 +68,8 @@ add_subdirectory(src/app)
 add_subdirectory(src/plugin)
 
 add_subdirectory(src/sdk)
+
+add_subdirectory(src/libs)
 
 # set(VTK_DEBUG_MODULE_LOADER ON) # 跟踪模块加载顺序
 

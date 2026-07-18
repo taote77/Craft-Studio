@@ -33,9 +33,9 @@
 
 #include <QDateTime>
 
-static QMutex& getMutex()
+static QRecursiveMutex& getMutex()
 {
-  static QMutex mutex(QMutex::Recursive);
+  static QRecursiveMutex mutex;
   qDebug() << "==QTime::toString ========";
   return mutex;
 }

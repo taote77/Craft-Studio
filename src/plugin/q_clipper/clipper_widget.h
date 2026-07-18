@@ -12,7 +12,7 @@ class ClipperWidget : public qbus::MicroService
 {
 
   // 带有gui 的插件，必须声明 withGui 属性，以便将其初始化在 QApplication gui 主线程
-  Q_PROPERTY(QString withGui READ withGui CONSTANT)
+  Q_PROPERTY(bool withGui READ withGui CONSTANT)
 
   Q_OBJECT
 public:

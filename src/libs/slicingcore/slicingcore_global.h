@@ -1,0 +1,12 @@
+#ifndef SLICINGCORE_GLOBAL_H
+#define SLICINGCORE_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(SLICINGCORE_LIBRARY)
+#  define SLICINGCORE_API Q_DECL_EXPORT
+#else
+#  define SLICINGCORE_API Q_DECL_IMPORT
+#endif
+
+#endif // SLICINGCORE_GLOBAL_H

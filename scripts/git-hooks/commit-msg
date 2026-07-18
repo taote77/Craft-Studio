@@ -1,0 +1,54 @@
+#!/bin/sh
+# commit-msg hook — enforces docs/conventions/commit-convention.md
+#
+# Install (once per clone):
+#   git config core.hooksPath scripts/git-hooks
+#
+# Checks:
+#   1. header matches: <type>(<scope>)!?: <subject>, type in the closed set
+#   2. header <= 100 bytes
+#   3. subject does not end with a period (。 or .)
+#   4. blank line between header and body
+#   Auto-generated messages (merge / revert / fixup! / squash!) pass through.
+
+msg_file="$1"
+
+# Strip scissors section (verbose mode) and comment lines
+msg=$(sed -e '/^# ------------------------ >8 ------------------------$/,$d' \
+          -e '/^#/d' "$msg_file")
+
+header=$(printf '%s\n' "$msg" | head -n 1)
+
+# Pass through git auto-generated messages
+case "$header" in
+  Merge\ * | Revert\ * | fixup!\ * | squash!\ *) exit 0 ;;
+esac
+
+fail() {
+  echo "" >&2
+  echo "✖ 提交被拒绝：$1" >&2
+  echo "  header : $header" >&2
+  echo "  规范   : docs/conventions/commit-convention.md" >&2
+  echo "  示例   : feat(qbus): 增加服务总线广播分发机制" >&2
+  exit 1
+}
+
+# 1. <type>(<scope>)!?: <subject>
+printf '%s' "$header" | grep -qE \
+  '^(feat|fix|refactor|perf|docs|style|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?!?: .+' ||
+  fail "header 不符合 <type>(<scope>): <subject> 格式（type 须为 feat|fix|refactor|perf|docs|style|test|build|ci|chore|revert）"
+
+# 2. header length (bytes; CJK is 3 bytes in UTF-8, ~30 汉字)
+[ "$(printf '%s' "$header" | wc -c)" -le 100 ] ||
+  fail "header 超过 100 字节，请精简 subject，细节放 body"
+
+# 3. subject must not end with punctuation
+case "$header" in
+  *。 | *.) fail "subject 不能以句号结尾" ;;
+esac
+
+# 4. blank line between header and body
+line2=$(printf '%s\n' "$msg" | sed -n '2p')
+[ -z "$line2" ] || fail "header 与 body 之间必须空一行"
+
+exit 0
